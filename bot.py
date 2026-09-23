@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import time
 import zoneinfo
 import discord
@@ -217,7 +217,7 @@ async def run(playwright: Playwright):
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
-@tasks.loop(seconds=10)
+@tasks.loop(minutes=60)
 async def runUpdate():
     global runContext    
     data = await getVGEvents()
