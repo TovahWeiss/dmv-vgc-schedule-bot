@@ -29,6 +29,7 @@ mdCalId = '927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@grou
 dcCalId = '343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com'
 channelId: int
 messageId: int
+guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 
 
 async def getVGEvents():
@@ -144,18 +145,11 @@ async def getExistingCalItems():
         if not events:
             return []
 
-        guids = []
-        guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
-        for e in events:
-            guidSearch = re.search(guidRegex,  str(e['description']))
-            if guidSearch:
-                guids.append(guidSearch.group(0))  
-        return guids    
-        
+        return events    
     except HttpError as error:
         print(f"An error occurred: {error}")
                      
-async def pushToCal(data):    
+async def pushToCal(data, existingEvents):    
     creds = None
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
@@ -171,13 +165,18 @@ async def pushToCal(data):
     with open("token.json", "w") as token:
         token.write(creds.to_json())
 
+    guids = []
+    for e in existingEvents:
+        guidSearch = re.search(guidRegex,  str(e['description']))
+        if guidSearch:
+            guids.append(guidSearch.group(0))  
+
     try:
         service = build("calendar", "v3", credentials=creds)
-        guids = await getExistingCalItems()
-        
+                
         data = [x for x in data if x['guid'] not in guids]
         for e in data:
-            hour = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(0,0,0,0,0,3)
+            endTime = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(0,0,0,0,0,3)
             calId = ''
             match e['state']:
                 case 'Virginia':
@@ -195,9 +194,8 @@ async def pushToCal(data):
                     'dateTime': datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')).isoformat(),
                 },
                 'end': {
-                    'dateTime': hour.astimezone().isoformat(),
-                },
-                'extendedProperties': e['guid']
+                    'dateTime': endTime.astimezone().isoformat(),
+                }
             }
             now = datetime.now().astimezone().isoformat()
             calEvent = service.events().insert(calendarId=calId, body=event).execute()
@@ -206,7 +204,68 @@ async def pushToCal(data):
     except HttpError as error:
         print(f"An error occurred: {error}")
 
-async def run(playwright: Playwright):
+async def checkAndUpdateEvents(playListings, existingCalEvents):
+    creds = None
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "credentials.json", SCOPES
+            )
+            creds = flow.run_local_server(port=0)
+    with open("token.json", "w") as token:
+        token.write(creds.to_json())
+        
+    try:
+        service = build("calendar", "v3", credentials=creds)
+        
+        for calEvent in existingCalEvents:
+            guidSearch = re.search(guidRegex,  str(calEvent['description']))
+            if guidSearch:
+                popId = guidSearch.group(0)
+                popEventMatches = [x for x in playListings if x['guid'] == popId]
+                                
+                if len(popEventMatches) != 1:
+                    continue
+                
+                popEvent = popEventMatches[0]
+                popWhenAdjusted = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')).astimezone()
+                
+                # no update needed
+                if(str(calEvent['start']['dateTime']).replace('T', ' ') == str(popWhenAdjusted)):
+                    continue
+                       
+                endTime = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(0,0,0,0,0,3)
+                calId = ''
+                match popEvent['state']:
+                    case 'Virginia':
+                        calId = vaCalId
+                    case 'Maryland':
+                        calId = mdCalId
+                    case 'District of Columbia':
+                        calId = dcCalId                
+                    
+                event = {
+                    'start': {
+                        'dateTime': datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')).isoformat(),
+                    },
+                    'end': {
+                        'dateTime': endTime.astimezone().isoformat(),
+                    }
+                }
+                
+                now = datetime.now().astimezone().isoformat()
+                calEvent = service.events().patch(calendarId=calId, eventId=calEvent['id'], body=event).execute()
+                print ('Event updated: %s at %s' % (calEvent.get('htmlLink'), now))
+                          
+    except HttpError as error:
+        print(error)
+        
+async def getScreenshot(playwright: Playwright):
     browser = await playwright.chromium.launch()
     page = await browser.new_page()
     await page.goto(schedView)
@@ -218,15 +277,17 @@ async def run(playwright: Playwright):
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
-@tasks.loop(minutes=16)
+@tasks.loop(hours=1)
 async def runUpdate():
     global runContext    
     data = await getVGEvents()
-        
-    await pushToCal(data)
+    existingEvents = await getExistingCalItems()
+    
+    # await pushToCal(data, existingEvents)
+    await checkAndUpdateEvents(data, existingEvents)
     
     async with async_playwright() as playwright:
-        await run(playwright)
+        await getScreenshot(playwright)
     
     embed = discord.Embed(
         title="DMV VGC Schedule",
@@ -257,7 +318,6 @@ async def runUpdate():
     embed.set_image(url="attachment://schedule.png")
     
     try:
-        
         channel = await bot.fetch_channel(channelId)
         msg = await channel.fetch_message(messageId)
         await msg.edit(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
