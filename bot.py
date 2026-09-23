@@ -217,7 +217,7 @@ async def run(playwright: Playwright):
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
-@tasks.loop(minutes=60)
+@tasks.loop(minutes=5)
 async def runUpdate():
     global runContext    
     data = await getVGEvents()
