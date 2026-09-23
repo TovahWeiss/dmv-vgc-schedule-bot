@@ -27,7 +27,8 @@ calView = 'https://calendar.google.com/calendar/u/0/embed?height=600&wkst=1&ctz=
 vaCalId = 'b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com'
 mdCalId = '927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com'
 dcCalId = '343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com'
-runContext: discord.ApplicationContext
+channelId: int
+messageId: int
 
 
 async def getVGEvents():
@@ -217,7 +218,7 @@ async def run(playwright: Playwright):
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
-@tasks.loop(minutes=5)
+@tasks.loop(minutes=16)
 async def runUpdate():
     global runContext    
     data = await getVGEvents()
@@ -256,10 +257,13 @@ async def runUpdate():
     embed.set_image(url="attachment://schedule.png")
     
     try:
-        await runContext.edit(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
-    except:
+        
+        channel = await bot.fetch_channel(channelId)
+        msg = await channel.fetch_message(messageId)
+        await msg.edit(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
+    except HttpError as error:
         runUpdate.cancel()
-        print("the message got deleted")
+        print(f"the message got deleted at {str(time.strftime('%I:%M %p on %b %d, %Y'))}: {error}")
 
 @bot.slash_command(name="sync", description="get dmv vgc schedule data")
 async def sync(ctx: discord.ApplicationContext):
@@ -276,11 +280,15 @@ async def sync(ctx: discord.ApplicationContext):
     )
        
     embed.url = calView
+    await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True)
+    message = await ctx.send(embed=embed) 
     
-    await ctx.respond(embed=embed) 
+    global channelId
+    channelId = ctx.channel_id
     
-    global runContext 
-    runContext = ctx
+    global messageId
+    messageId = message.id
+    
     runUpdate.start()
 
 bot.run(os.getenv('TOKEN')) # run the bot with the token
