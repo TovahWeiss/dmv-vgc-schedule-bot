@@ -1,13 +1,14 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import time
+import zoneinfo
 import discord
 import os # default module
 from dotenv import load_dotenv
 import requests
 import os.path
-from tzlocal import get_localzone
-import asyncio
 from playwright.async_api import async_playwright, Playwright
 import re
+from discord.ext import tasks
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -26,6 +27,8 @@ calView = 'https://calendar.google.com/calendar/u/0/embed?height=600&wkst=1&ctz=
 vaCalId = 'b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com'
 mdCalId = '927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com'
 dcCalId = '343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com'
+runContext: discord.ApplicationContext
+
 
 async def getVGEvents():
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
@@ -70,10 +73,10 @@ async def getVGEvents():
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
 
-        futureCap = datetime.today() + timedelta(7)
+        futureCap = datetime.today().replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(30)
 
         data = response.json()
-        data = [x for x in data if datetime.strptime(x['when'], '%Y-%m-%d %H:%M:%S') < futureCap]
+        data = [x for x in data if datetime.strptime(x['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) < futureCap]
         sorted(data, key=lambda event: event['when'])
         return data
 
@@ -101,7 +104,7 @@ async def getExistingCalItems():
         service = build("calendar", "v3", credentials=creds)
 
         # Call the Calendar API
-        now = datetime.now().astimezone(get_localzone()).isoformat()
+        now = datetime.now().astimezone().isoformat()
         events_result = (
             service.events()
             .list(
@@ -173,7 +176,7 @@ async def pushToCal(data):
         
         data = [x for x in data if x['guid'] not in guids]
         for e in data:
-            hour = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S') + timedelta(0,0,0,0,0,3)
+            hour = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(0,0,0,0,0,3)
             calId = ''
             match e['state']:
                 case 'Virginia':
@@ -188,14 +191,14 @@ async def pushToCal(data):
                 'location': e['street_address'],
                 'description': e['type'] + '\n\n\n' + e['guid'],
                 'start': {
-                    'dateTime': datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').astimezone(get_localzone()).isoformat(),
+                    'dateTime': datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')).isoformat(),
                 },
                 'end': {
-                    'dateTime': hour.astimezone(get_localzone()).isoformat(),
+                    'dateTime': hour.astimezone().isoformat(),
                 },
                 'extendedProperties': e['guid']
             }
-            now = datetime.now().astimezone(get_localzone()).isoformat()
+            now = datetime.now().astimezone().isoformat()
             calEvent = service.events().insert(calendarId=calId, body=event).execute()
             print ('Event created: %s at %s' % (calEvent.get('htmlLink'), now))
         
@@ -214,10 +217,11 @@ async def run(playwright: Playwright):
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
-@bot.slash_command(name="sync", description="get poke data")
-async def sync(ctx: discord.ApplicationContext):
-    await ctx.respond("Fetching poke data...", ephemeral=True)
+@tasks.loop(seconds=10)
+async def runUpdate():
+    global runContext    
     data = await getVGEvents()
+        
     await pushToCal(data)
     
     async with async_playwright() as playwright:
@@ -230,14 +234,20 @@ async def sync(ctx: discord.ApplicationContext):
     
     embed.add_field(
         name="Add to Google Calendar", 
-        value="[Click here to add this to your calendar](https://calendar.google.com/calendar/u/0/r?cid=343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com&cid=927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com&cid=b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com)"
+        value="[Click here to sync to your calendar](https://calendar.google.com/calendar/u/0/r?cid=343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com&cid=927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com&cid=b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com)"
         , inline=True
     )
     
     embed.add_field(
-        name="Weekly Schedule", 
+        name="Whats happening this week?", 
         value=f"[View Schedule]({schedView})"
         , inline=True
+    )
+    
+    embed.add_field(
+        name="Last updated at", 
+        value=f"{str(time.strftime('%I:%M %p on %b %d, %Y'))}"
+        , inline=False
     )
     
     embed.url = calView
@@ -245,10 +255,32 @@ async def sync(ctx: discord.ApplicationContext):
     # Display images or graphical assets
     embed.set_image(url="attachment://schedule.png")
     
-    await ctx.send(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
-    # for e in data:
-    #         print(e['shop'] + ' ' + '('+ e['state'] +': ' + e['type'] + ' on ' + e['when'] +"\n")
-    # await ctx.interaction.edit_original_response(content= f"Created {len(data)} events")
+    try:
+        await runContext.edit(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
+    except:
+        runUpdate.cancel()
+        print("the message got deleted")
 
+@bot.slash_command(name="sync", description="get dmv vgc schedule data")
+async def sync(ctx: discord.ApplicationContext):
+    runUpdate.cancel()
+    embed = discord.Embed(
+        title="DMV VGC Schedule",
+        color=discord.Color.yellow()
+    )
+    
+    embed.add_field(
+        name="Initalizing", 
+        value="Hold tight for like 15 seconds pls"
+        , inline=True
+    )
+       
+    embed.url = calView
+    
+    await ctx.respond(embed=embed) 
+    
+    global runContext 
+    runContext = ctx
+    runUpdate.start()
 
 bot.run(os.getenv('TOKEN')) # run the bot with the token
