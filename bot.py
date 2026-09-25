@@ -364,6 +364,10 @@ async def runUpdate():
 
 @bot.slash_command(name="sync", description="get dmv vgc schedule data")
 async def sync(ctx: discord.ApplicationContext):
+    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True)
+        return
+    
     runUpdate.cancel()
     embed = discord.Embed(
         title="DMV VGC Schedule",
