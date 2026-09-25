@@ -264,7 +264,44 @@ async def checkAndUpdateEvents(playListings, existingCalEvents):
                           
     except HttpError as error:
         print(error)
+ 
+async def checkAndDeleteEvents(playListings, existingCalEvents):
+    creds = None
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "credentials.json", SCOPES
+            )
+            creds = flow.run_local_server(port=0)
+    with open("token.json", "w") as token:
+        token.write(creds.to_json())
         
+    try:
+        service = build("calendar", "v3", credentials=creds)
+        existingCalendarGuids = []
+        for calEvent in existingCalEvents:
+            guidSearch = re.search(guidRegex,  str(calEvent['description']))
+            if guidSearch:
+                existingCalendarGuids.append(guidSearch.group(0))
+                
+        popGuids = [x['guid'] for x in playListings]
+        canceledEvents = [x for x in existingCalendarGuids if x not in popGuids]
+        
+        for calEvent in existingCalEvents:
+            guidSearch = re.search(guidRegex,  str(calEvent['description']))
+            if guidSearch and guidSearch.group(0) in canceledEvents:                   
+                now = datetime.now().astimezone().isoformat()
+                service.events().delete(calendarId=calEvent['organizer']['email'], eventId=calEvent['id']).execute()
+                print ('Event deleted: %s at %s' % (calEvent['summary'], now))
+                          
+    except HttpError as error:
+        print(error)      
+               
 async def getScreenshot(playwright: Playwright):
     browser = await playwright.chromium.launch()
     page = await browser.new_page()
@@ -279,12 +316,12 @@ async def on_ready():
 
 @tasks.loop(hours=1)
 async def runUpdate():
-    global runContext    
     data = await getVGEvents()
     existingEvents = await getExistingCalItems()
     
-    # await pushToCal(data, existingEvents)
+    await pushToCal(data, existingEvents)
     await checkAndUpdateEvents(data, existingEvents)
+    await checkAndDeleteEvents(data, existingEvents)
     
     async with async_playwright() as playwright:
         await getScreenshot(playwright)
