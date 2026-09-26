@@ -30,7 +30,21 @@ dcCalId = '343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@grou
 channelId: int
 messageId: int
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+league = 'nonpremier VG'
 
+def isLeague(e):
+    try:
+        if(e['type']):
+            return e['type'] == league
+        return league in str(e['description'])
+    except:
+        print('could not determine type of event for:' + e)
+        return False
+
+def getEventTz(e):
+    if isLeague(e):
+        return 'UTC'
+    return 'America/New_York'
 
 async def getVGEvents():
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
@@ -75,7 +89,7 @@ async def getVGEvents():
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
 
-        futureCap = datetime.today().replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(30)
+        futureCap = datetime.today().replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(60)
 
         data = response.json()
         data = [x for x in data if datetime.strptime(x['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) < futureCap]
@@ -176,7 +190,7 @@ async def pushToCal(data, existingEvents):
                 
         data = [x for x in data if x['guid'] not in guids]
         for e in data:
-            endTime = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(0,0,0,0,0,3)
+            endTime = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e))) + timedelta(0,0,0,0,0,3)
             calId = ''
             match e['state']:
                 case 'Virginia':
@@ -189,9 +203,9 @@ async def pushToCal(data, existingEvents):
             event = {
                 'summary': e['shop'] + ' ('+ e['state']+')',
                 'location': e['street_address'],
-                'description': e['type'] + '\n\n\n' + e['guid'],
+                'description': e['type'] + ('\n' + e['pokemon_url'] if not isLeague(e) else '') + '\n\n\n' + e['guid'],
                 'start': {
-                    'dateTime': datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')).isoformat(),
+                    'dateTime': datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e))).isoformat(),
                 },
                 'end': {
                     'dateTime': endTime.astimezone().isoformat(),
@@ -200,7 +214,7 @@ async def pushToCal(data, existingEvents):
             now = datetime.now().astimezone().isoformat()
             calEvent = service.events().insert(calendarId=calId, body=event).execute()
             print ('Event created: %s at %s' % (calEvent.get('htmlLink'), now))
-        
+            
     except HttpError as error:
         print(f"An error occurred: {error}")
 
@@ -233,13 +247,13 @@ async def checkAndUpdateEvents(playListings, existingCalEvents):
                     continue
                 
                 popEvent = popEventMatches[0]
-                popWhenAdjusted = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')).astimezone()
+                popWhenAdjusted = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))).astimezone()
                 
                 # no update needed
                 if(str(calEvent['start']['dateTime']).replace('T', ' ') == str(popWhenAdjusted)):
                     continue
                        
-                endTime = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(0,0,0,0,0,3)
+                endTime = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))) + timedelta(0,0,0,0,0,3)
                 calId = ''
                 match popEvent['state']:
                     case 'Virginia':
@@ -251,7 +265,7 @@ async def checkAndUpdateEvents(playListings, existingCalEvents):
                     
                 event = {
                     'start': {
-                        'dateTime': datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')).isoformat(),
+                        'dateTime': datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))).isoformat(),
                     },
                     'end': {
                         'dateTime': endTime.astimezone().isoformat(),
