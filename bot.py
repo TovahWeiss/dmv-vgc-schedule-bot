@@ -89,10 +89,7 @@ async def getVGEvents():
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
 
-        futureCap = datetime.today().replace(tzinfo=zoneinfo.ZoneInfo('UTC')) + timedelta(60)
-
         data = response.json()
-        data = [x for x in data if datetime.strptime(x['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo('UTC')) < futureCap]
         sorted(data, key=lambda event: event['when'])
         return data
 
@@ -185,12 +182,17 @@ async def pushToCal(data, existingEvents):
         if guidSearch:
             guids.append(guidSearch.group(0))  
 
+    now = datetime.now().astimezone().isoformat()
     try:
         service = build("calendar", "v3", credentials=creds)
                 
         data = [x for x in data if x['guid'] not in guids]
         for e in data:
-            endTime = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e))) + timedelta(0,0,0,0,0,3)
+            startTime = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e)))
+            if startTime < now:
+                continue
+            
+            endTime = startTime + timedelta(0,0,0,0,0,3)
             calId = ''
             match e['state']:
                 case 'Virginia':
@@ -205,13 +207,13 @@ async def pushToCal(data, existingEvents):
                 'location': e['street_address'],
                 'description': e['type'] + ('\n' + e['pokemon_url'] if not isLeague(e) else '') + '\n\n\n' + e['guid'],
                 'start': {
-                    'dateTime': datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e))).isoformat(),
+                    'dateTime': startTime.isoformat(),
                 },
                 'end': {
                     'dateTime': endTime.astimezone().isoformat(),
                 }
             }
-            now = datetime.now().astimezone().isoformat()
+
             calEvent = service.events().insert(calendarId=calId, body=event).execute()
             print ('Event created: %s at %s' % (calEvent.get('htmlLink'), now))
             
@@ -253,7 +255,7 @@ async def checkAndUpdateEvents(playListings, existingCalEvents):
                 if(str(calEvent['start']['dateTime']).replace('T', ' ') == str(popWhenAdjusted)):
                     continue
                        
-                endTime = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))) + timedelta(0,0,0,0,0,3)
+                endTime = popWhenAdjusted + timedelta(0,0,0,0,0,3)
                 calId = ''
                 match popEvent['state']:
                     case 'Virginia':
@@ -265,7 +267,7 @@ async def checkAndUpdateEvents(playListings, existingCalEvents):
                     
                 event = {
                     'start': {
-                        'dateTime': datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))).isoformat(),
+                        'dateTime': popWhenAdjusted.isoformat(),
                     },
                     'end': {
                         'dateTime': endTime.astimezone().isoformat(),
