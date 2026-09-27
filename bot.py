@@ -182,7 +182,7 @@ async def pushToCal(data, existingEvents):
         if guidSearch:
             guids.append(guidSearch.group(0))  
 
-    now = datetime.now().astimezone().isoformat()
+    now = datetime.now().astimezone()
     try:
         service = build("calendar", "v3", credentials=creds)
                 
@@ -215,7 +215,7 @@ async def pushToCal(data, existingEvents):
             }
 
             calEvent = service.events().insert(calendarId=calId, body=event).execute()
-            print ('Event created: %s at %s' % (calEvent.get('htmlLink'), now))
+            print ('Event created: %s at %s' % (calEvent.get('htmlLink'), now.isoformat()))
             
     except HttpError as error:
         print(f"An error occurred: {error}")
