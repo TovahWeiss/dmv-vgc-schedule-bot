@@ -262,10 +262,21 @@ async def pushToCal(data, existingEvents):
             endTime = startTime + timedelta(0,0,0,0,0,3)
             calId = getEventCalId(e)                
             
-            typeLabel = 'Friendly League' if isLeague(e) else e['type'] + ': '
             
+            typeLabel = ''
+            emoji = ''
+            if isLeague(e):
+                typeLabel = 'Friendly League'
+                emoji = '👥' 
+            else :
+                typeLabel = e['type']
+                if e['type'] == 'League Challenge VG':
+                    emoji = '🥊'
+                else:
+                    emoji = '🏆'
+                    
             event = {
-                'summary': e['shop'] + ' ('+ e['state']+')',
+                'summary': emoji + ' ' + e['shop'] + ' ('+ e['state']+')',
                 'location': e['street_address'],
                 'description': typeLabel + ('\n' + e['pokemon_url'] if not isLeague(e) else '') + '\n\n\n' + e['guid'],
                 'start': {
