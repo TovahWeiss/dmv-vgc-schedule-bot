@@ -26,7 +26,7 @@ schedView ='https://calendar.google.com/calendar/embed?height=702&wkst=1&ctz=Ame
 friendlySchedView ='https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=VGC%20Friendly%20Leagues&mode=AGENDA&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73'
 
 
-calView = 'https://calendar.google.com/calendar/u/0/embed?height=600&wkst=1&ctz=America/New_York&showPrint=0&src=MzQzYjc1MmFlOGIyOTQyZGJlOWEyZjJhYTMyYTA0NzBkNTBlY2ZjNDQwOWRmZmQxODM4NTFkN2Y0ZDM1YjI1YkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=OTI3MTI0ZmI3MTA5Y2U0YWRlNGMwOTgyNzc5NTFjZGRjODViMWIzZWM5NmYzYWY1M2Q0MjI3MmQwZjNiMGRmY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YjM5NWVlNGRkZDY0NzRkNjBhNjljOTExZDc2YzA0YmFkZjY0NDUxZTI2YTFkZmIxMDEyZjU2NDgyZGZmNTM4MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%237986cb&color=%23d50000&color=%23c0ca33'
+allCalView = 'https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=All%20DMV%20VGC%20Events&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=MzQzYjc1MmFlOGIyOTQyZGJlOWEyZjJhYTMyYTA0NzBkNTBlY2ZjNDQwOWRmZmQxODM4NTFkN2Y0ZDM1YjI1YkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=OTI3MTI0ZmI3MTA5Y2U0YWRlNGMwOTgyNzc5NTFjZGRjODViMWIzZWM5NmYzYWY1M2Q0MjI3MmQwZjNiMGRmY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YjM5NWVlNGRkZDY0NzRkNjBhNjljOTExZDc2YzA0YmFkZjY0NDUxZTI2YTFkZmIxMDEyZjU2NDgyZGZmNTM4MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73&color=%237986cb&color=%23d50000&color=%23c0ca33'
 friendlyCalView = 'https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=VGC%20Friendly%20Leagues&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73'
 
 vaCalId = 'b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com'
@@ -438,7 +438,7 @@ async def runUpdate():
         , inline=False
     )
     
-    embed.url = calView
+    embed.url = allCalView
     
     # Display images or graphical assets
     embed.set_image(url="attachment://schedule.png")
@@ -469,7 +469,7 @@ async def sync(ctx: discord.ApplicationContext):
         , inline=True
     )
        
-    embed.url = calView
+    embed.url = allCalView
     await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True)
     message = await ctx.send(embed=embed) 
     
