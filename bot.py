@@ -40,24 +40,38 @@ friendlyDcCalId = 'eb5d9c46e85780cbe9b0df36585ab52fc932a59e1c5e49760135e7f26606d
 channelId: int
 messageId: int
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
-league = 'nonpremier VG'
+nonPremierEventType = 'nonpremier VG'
 
-def isLeague(e):
+def isNonPremier(e):
     try:
         if(e['type']):
-            return e['type'] == league
-        return league in str(e['description'])
+            return e['type'] == nonPremierEventType
+        return nonPremierEventType in str(e['description'])
     except:
         print('could not determine type of event for:' + e)
         return False
 
+def hasSanctionedUrl(e):
+    tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"
+    if(e['pokemon_url']):
+        guidSearch = re.search(tournamentUrlEnding,  str(e['pokemon_url']))
+        if guidSearch:
+           return True
+    elif(e['description']):
+        guidSearch = re.search(tournamentUrlEnding,  str(e['pokemon_url']))
+        if guidSearch:
+            return True
+    return False
+        
+
 def getEventTz(e):
-    if isLeague(e):
+    if isNonPremier(e):
+       if not hasSanctionedUrl(e):
         return 'UTC'
     return 'America/New_York'
 
 def getEventCalId(e):
-    if(isLeague(e)):
+    if(isNonPremier(e)):
         match e['state']:
             case 'Virginia':
                 return friendlyVaCalId
@@ -265,7 +279,7 @@ async def pushToCal(data, existingEvents):
             
             typeLabel = ''
             emoji = ''
-            if isLeague(e):
+            if isNonPremier(e):
                 typeLabel = 'Friendly League'
                 emoji = '👥' 
             else :
@@ -278,7 +292,7 @@ async def pushToCal(data, existingEvents):
             event = {
                 'summary': emoji + ' ' + e['shop'] + ' ('+ e['state']+')',
                 'location': e['street_address'],
-                'description': typeLabel + ('\n' + e['pokemon_url'] if not isLeague(e) else '') + '\n\n\n' + e['guid'],
+                'description': typeLabel + ('\n<a href="' + e['pokemon_url']+ '">Official Event Page</a>' if hasSanctionedUrl(e) else '') + '\n\n\n' + e['guid'],
                 'start': {
                     'dateTime': startTime.isoformat(),
                 },
