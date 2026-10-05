@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
+import json
 import time
+import uuid
 import zoneinfo
 import discord
 import os # default module
@@ -37,10 +39,10 @@ friendlyVaCalId = 'ad51dc180f1337ccc228f8f61973408d9cc7e74871cb61e8fc0ea27203e4e
 friendlyMdCalId = '873fa813d71d99c7351e407086eb0e9d7208c70533dc8ca11e3564852e053448@group.calendar.google.com'
 friendlyDcCalId = 'eb5d9c46e85780cbe9b0df36585ab52fc932a59e1c5e49760135e7f26606da4a@group.calendar.google.com'
 
-channelId: int
-messageId: int
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 nonPremierEventType = 'nonpremier VG'
+
+messageListFile = 'updateMessages.json'
 
 def isNonPremier(e):
     try:
@@ -409,6 +411,8 @@ async def getScreenshot(playwright: Playwright):
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
+    await runUpdate()
+    print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
 async def runUpdate():
@@ -468,13 +472,35 @@ async def runUpdate():
     # Display images or graphical assets
     embed.set_image(url="attachment://schedule.png")
     
-    try:
-        channel = await bot.fetch_channel(channelId)
-        msg = await channel.fetch_message(messageId)
-        await msg.edit(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
-    except HttpError as error:
-        runUpdate.cancel()
-        print(f"the message got deleted at {str(time.strftime('%I:%M %p on %b %d, %Y'))}: {error}")
+    curChannel = None
+    curMessage = None
+    
+    
+    channels = []
+    with open(messageListFile, 'r+', encoding='utf-8') as file:
+        channels = json.load(file)
+    if not channels:
+        return
+    
+    for msg in channels:
+        curChannel = msg['channelId']
+        curMessage = msg['messageId']
+        try: 
+            channel = await bot.fetch_channel(curChannel)
+            msg = await channel.fetch_message(curMessage)
+            await msg.edit(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
+        except discord.errors.NotFound as error:
+            with open(messageListFile, 'r+') as file:
+                channels = json.load(file)
+                valids = [x for x in channels if x['channelId'] != curChannel]
+                    
+            tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
+            with open(tempfile, 'w') as f:
+                json.dump(valids, f, indent=4)
+
+            # rename temporary file replacing old file
+            os.replace(tempfile, messageListFile)
+        
 
 @bot.slash_command(name="sync", description="get dmv vgc schedule data")
 async def sync(ctx: discord.ApplicationContext):
@@ -498,11 +524,25 @@ async def sync(ctx: discord.ApplicationContext):
     await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True)
     message = await ctx.send(embed=embed) 
     
-    global channelId
     channelId = ctx.channel_id
-    
-    global messageId
     messageId = message.id
+
+    channels = []
+   
+    with open(messageListFile, 'r+') as file:
+        channels = json.load(file)
+        matches = [x for x in channels if x['channelId'] == channelId]
+        if not matches or len(matches) == 0:
+            channels.append({"channelId":channelId, "messageId":messageId})
+            
+    # create randomly named temporary file to avoid 
+    # interference with other thread/asynchronous request
+    tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
+    with open(tempfile, 'w') as f:
+        json.dump(channels, f, indent=4)
+
+    # rename temporary file replacing old file
+    os.replace(tempfile, messageListFile)
     
     runUpdate.start()
 
