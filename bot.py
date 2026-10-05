@@ -11,6 +11,7 @@ import os.path
 from playwright.async_api import async_playwright, Playwright
 import re
 from discord.ext import tasks
+from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -411,10 +412,13 @@ async def getScreenshot(playwright: Playwright):
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
+    if not Path(messageListFile).is_file():
+        with open(messageListFile, "w") as file:
+            file.write("[]")
     runUpdate.start()
     print(f"{bot.user} has initialized!")
 
-@tasks.loop(seconds=15)
+@tasks.loop(hours=1)
 async def runUpdate():
     data = await getVGEvents()
     existingEvents = await getExistingCalItems()
