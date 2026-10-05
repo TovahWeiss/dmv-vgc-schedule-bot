@@ -411,10 +411,10 @@ async def getScreenshot(playwright: Playwright):
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
-    await runUpdate()
+    runUpdate.start()
     print(f"{bot.user} has initialized!")
 
-@tasks.loop(hours=1)
+@tasks.loop(seconds=15)
 async def runUpdate():
     data = await getVGEvents()
     existingEvents = await getExistingCalItems()
