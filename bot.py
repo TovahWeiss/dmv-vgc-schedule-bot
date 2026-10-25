@@ -164,7 +164,7 @@ async def getExistingCalItems():
         service = build("calendar", "v3", credentials=creds)
 
         # Call the Calendar API
-        now = datetime.now().astimezone().isoformat()
+        now = (datetime.now() -  timedelta(hours=3)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
         events_result = (
             service.events()
             .list(
@@ -420,6 +420,7 @@ async def on_ready():
 
 @tasks.loop(hours=1)
 async def runUpdate():
+    print(f"running update at {(datetime.now()).astimezone().isoformat()}")
     data = await getVGEvents()
     existingEvents = await getExistingCalItems()
     
@@ -548,6 +549,16 @@ async def sync(ctx: discord.ApplicationContext):
     # rename temporary file replacing old file
     os.replace(tempfile, messageListFile)
     
+    runUpdate.start()
+
+@bot.slash_command(name="manualsync", description="force all instances to update")
+async def manualsync(ctx: discord.ApplicationContext):
+    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True)
+        return
+    
+    runUpdate.cancel()
+    await ctx.respond(content="forcing schedule update!", ephemeral=True)
     runUpdate.start()
 
 bot.run(os.getenv('TOKEN')) # run the bot with the token
