@@ -142,25 +142,35 @@ import base64
 
 async def main():
     root = tk.Tk()
+    embedH = 720
+    embedW = 1280
+    headerHeight = 100
     fFamily = "Arial"
     font_path = "assets/Montserrat-Italic-VariableFont_wght.ttf"
-    with open(font_path, 'rb') as f:
-        ttf_bytes = f.read()
-
-    b64_encoded = base64.b64encode(ttf_bytes).decode('utf-8')
-    data_uri = f'data:font/ttf;base64,{b64_encoded}'
+    rowIndex = 0
+    rowHeight = 44
+    rowScheduleStart = 140
+    imageBackground = 'white'
+    textPrimaryColor = 'black'
+    locationTextColor = 'grey'
+    rowBackground = 'lightblue'
+    highlightColor='dodgerblue'
     
     existingEvents = await getExistingCalItems()
-  
     if(existingEvents is None or len(existingEvents) == 0):
-            return
-        
+        return
     existingEvents = [x for x in existingEvents if x['organizer']['email'] in [vaCalId, mdCalId, dcCalId]]
   
-    d = draw.Drawing(1280, 720, origin='top-left', font_family=fFamily)
-    d.append(draw.Rectangle(0, 0, 1280, 720, fill='white'))
+    
+  
+    d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fFamily)
+    d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
    
     #header branding
+    with open(font_path, 'rb') as f:
+        ttf_bytes = f.read()
+    b64_encoded = base64.b64encode(ttf_bytes).decode('utf-8')
+    data_uri = f'data:font/ttf;base64,{b64_encoded}'
     css_rules = f"""
         @font-face {{
             font-family: 'Montserrat';
@@ -174,57 +184,57 @@ async def main():
         }}
     """
     d.append_css(css_rules)
-    d.append(draw.Rectangle(0, 0, 1280, 100, fill='lightgray'))
-    d.append(  draw.Image( x=5, y=5, width=90, height=90,  path="assets/DMV_Falinks.png", embed=True) )
-    d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill='Black', center=True, class_='title-text')) 
+    d.append(draw.Rectangle(0, 0, embedW, headerHeight, fill='lightgray'))
+    d.append(draw.Image( x=5, y=5, width=90, height=90,  path="assets/DMV_Falinks.png", embed=True) )
+    d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill= textPrimaryColor, center=True, class_='title-text')) 
         
-    index = 0
-    for i in range(100, 720, 44):
-        if index > len(existingEvents)-1: 
+    for i in range(headerHeight, embedH, rowHeight):
+        if rowIndex > len(existingEvents)-1: 
             continue
-        e = existingEvents[index]
+        e = existingEvents[rowIndex]
         rowBaseline = i + 26
         
+        #draw dividers if dif date from last and write date
         currentStart = datetime.strptime(e['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z')
-                    
-        #draw dividers if dif date from last
-        if(index != 0):
-            previousStartDate = datetime.strptime(existingEvents[index-1]['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z').date()
+        if rowIndex < len(existingEvents)-1: 
+            d.append(draw.Rectangle(5, i+10, embedW-10, rowHeight+20, fill=rowBackground))
+        d.append(draw.Rectangle(5, i, embedW-10, rowHeight, fill=rowBackground,  rx=10, ry=10))
+           
+        if(rowIndex != 0):
+            previousStartDate = datetime.strptime(existingEvents[rowIndex-1]['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z').date()
             if(currentStart.date() != previousStartDate):
-                d.append(draw.Line(0, i, 1280, i, stroke='lightgray', stroke_width=1))
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill='black'))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill='black'))
+                d.append(draw.Line(0, i, embedW, i, stroke=imageBackground, stroke_width=2))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= textPrimaryColor))
         else:
             # line 1
-            d.append(draw.Line(0, i, 1280, i, stroke='lightgray', stroke_width=1))
+            d.append(draw.Line(0, i, embedW, i, stroke=imageBackground, stroke_width=2))
             if(currentStart.date() == datetime.now().date()):
-                d.append(draw.Circle(26, i + 20, 16, fill='dodgerblue'))
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill='white'))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill='dodgerblue'))
+                d.append(draw.Circle(26, i + 20, 16, fill=highlightColor))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=imageBackground))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill=highlightColor))
             else:
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill='black'))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill='black'))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= textPrimaryColor))
         
-        color = 'black'
+        
+        color = textPrimaryColor
         if(e['organizer']['email'] == vaCalId):
             color = 'green'
         elif(e['organizer']['email'] == dcCalId):
-            color = 'lightblue'
+            color = 'purple'
         elif(e['organizer']['email'] == mdCalId):
             color = 'red'
                 
-        rowGroup = draw.Group()   
-        bulletStart = 140
+        rowGroup = draw.Group()
         
     # schedule data
         schedGroup = draw.Group()  
         bullet = draw.Circle(0, -4 , 6, fill=color)
         schedGroup.append(bullet) # Draw a circle
         startTime = currentStart.strftime("%I:%M%p")
-        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill='black'))
-        rowGroup.append(draw.Use(schedGroup, 0, 0))
-        
-       
+        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill= textPrimaryColor))
+           
     # event data
         eventGroup = draw.Group()
         rowFontSize = 14
@@ -242,12 +252,14 @@ async def main():
         titleStart = emojiStart + emojiWidth + 5
         title = str(e['summary'])[1:]
         titleWidth = fsPixels.measure(title)
-        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill='Black'))
-        eventGroup.append(draw.Text(e['location'], rowFontSize, titleStart + titleWidth, 0, fill='grey'))
+        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= textPrimaryColor))
+        eventGroup.append(draw.Text(e['location'], rowFontSize, titleStart + titleWidth, 0, fill=locationTextColor))
+        
+        rowGroup.append(draw.Use(schedGroup, 0, 0))
         rowGroup.append(draw.Use(eventGroup, 120, 0))
         
-        d.append(draw.Use(eventGroup, bulletStart, rowBaseline, fill='red'))
-        index += 1
+        d.append(draw.Use(rowGroup, rowScheduleStart, rowBaseline))
+        rowIndex += 1
 
     d.set_pixel_scale(2)  # Set number of pixels per geometry unit
     #d.set_render_size(400, 200)  # Alternative to set_pixel_scale
