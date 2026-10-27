@@ -149,15 +149,16 @@ async def main():
     embedW = config['embedW']
     headerHeight = config['headerHeight']
     margin = config['margin']
-    headerColor = config['headerColor']
+    headerGradientStartColor = config['headerGradientStartColor']
+    headerGradientEndColor = config['headerGradientEndColor']
+    headerFont = config['headerFont']
     fontFamily = config['fontFamily']
-    fontPath = config['fontPath']
     rowIndex = config['rowIndex']
     rowHeight = config['rowHeight']
     rowScheduleStart = config['rowScheduleStart']
     imageBackground = config['imageBackground']
     textPrimaryColor = config['textPrimaryColor']
-    textHighlightColor = config['textHighlightColor']
+    headerTextColor = config['headerTextColor']
     locationTextColor = config['locationTextColor']
     rowBackground = config['rowBackground']
     highlightColor = config['highlightColor']
@@ -176,27 +177,23 @@ async def main():
     # d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
    
     #header branding
-    with open(fontPath, 'rb') as f:
-        ttf_bytes = f.read()
-    b64_encoded = base64.b64encode(ttf_bytes).decode('utf-8')
-    data_uri = f'data:font/ttf;base64,{b64_encoded}'
     css_rules = f"""
-        @font-face {{
-            font-family: 'Montserrat';
-            src: url('{data_uri}') format('truetype');
-        }}
         .title-text {{
-            font-family: 'Montserrat';
-            font-weight: 900;
             font-size: 54px;
             font-style: italic;
-            font-width: ultra-expanded;
+            font-width: expanded;
         }}
     """
     d.append_css(css_rules)
-    d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=headerColor, rx=cornerRadius, ry=cornerRadius))
+    
+    gradient2 = draw.LinearGradient(1, embedW/6, embedW/2, embedW/3)
+    gradient2.add_stop(0, headerGradientStartColor, 1)
+    gradient2.add_stop(1, headerGradientEndColor, 1)
+    d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill='white', rx=cornerRadius, ry=cornerRadius))
+    d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=gradient2, rx=cornerRadius, ry=cornerRadius))
+    
     d.append(draw.Image( x=margin + 20, y=margin, width=logoSize, height=logoSize,  path=logoPath, embed=True) )
-    d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill=textHighlightColor, center=True, class_='title-text')) 
+    d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill=headerTextColor, center=True, class_='title-text', font_family=headerFont)) 
         
     for i in range(headerHeight, embedH, rowHeight):
         if rowIndex > len(existingEvents)-1: 
