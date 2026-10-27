@@ -160,9 +160,7 @@ async def main():
     if(existingEvents is None or len(existingEvents) == 0):
         return
     existingEvents = [x for x in existingEvents if x['organizer']['email'] in [vaCalId, mdCalId, dcCalId]]
-  
     
-  
     d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fFamily)
     d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
    
@@ -181,6 +179,7 @@ async def main():
             font-weight: 900;
             font-size: 54px;
             fill: #333333;
+            color: white;
         }}
     """
     d.append_css(css_rules)
