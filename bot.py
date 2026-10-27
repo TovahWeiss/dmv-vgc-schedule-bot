@@ -8,7 +8,6 @@ import os # default module
 from dotenv import load_dotenv
 import requests
 import os.path
-from playwright.async_api import async_playwright, Playwright
 import re
 from discord.ext import tasks
 from pathlib import Path
@@ -537,14 +536,6 @@ async def makeGraphic():
         # cairosvg.svg2png(url="schedule.svg", write_to="schedule.png")
         d.save_png('output/schedule.png')
                      
-async def getScreenshot(playwright: Playwright):
-    browser = await playwright.chromium.launch()
-    page = await browser.new_page()
-    await page.goto(schedView)
-    await page.wait_for_timeout(2000)
-    await page.screenshot(path='output/schedule.png', full_page=True)
-    await browser.close()
-
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
@@ -564,8 +555,6 @@ async def runUpdate():
     await checkAndUpdateEvents(data, existingEvents)
     await checkAndDeleteEvents(data, existingEvents)
     
-    # async with async_playwright() as playwright:
-    #     await getScreenshot(playwright)
     await makeGraphic()
     
     embed = discord.Embed(
