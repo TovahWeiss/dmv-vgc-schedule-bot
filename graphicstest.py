@@ -145,27 +145,27 @@ async def main():
     
     with open("graphicConfig.json") as cfg:
         config = json.load(cfg)
-        embedH = config['embedH']
-        embedW = config['embedW']
-        headerHeight = config['headerHeight']
-        margin = config['margin']
-        headerColor = config['headerColor']
-        fontFamily = config['fontFamily']
-        fontPath = config['fontPath']
-        rowIndex = config['rowIndex']
-        rowHeight = config['rowHeight']
-        rowScheduleStart = config['rowScheduleStart']
-        imageBackground = config['imageBackground']
-        textPrimaryColor = config['textPrimaryColor']
-        textHighlightColor = config['textHighlightColor']
-        locationTextColor = config['locationTextColor']
-        rowBackground = config['rowBackground']
-        highlightColor = config['highlightColor']
-        logoSize = config['logoSize']
-        cornerRadius = config['cornerRadius']
-        cupIconPath = config['cupIconPath']
-        chalIconPath = config['chalIconPath']
-        logoPath = config['logoPath']
+    embedH = config['embedH']
+    embedW = config['embedW']
+    headerHeight = config['headerHeight']
+    margin = config['margin']
+    headerColor = config['headerColor']
+    fontFamily = config['fontFamily']
+    fontPath = config['fontPath']
+    rowIndex = config['rowIndex']
+    rowHeight = config['rowHeight']
+    rowScheduleStart = config['rowScheduleStart']
+    imageBackground = config['imageBackground']
+    textPrimaryColor = config['textPrimaryColor']
+    textHighlightColor = config['textHighlightColor']
+    locationTextColor = config['locationTextColor']
+    rowBackground = config['rowBackground']
+    highlightColor = config['highlightColor']
+    logoSize = config['logoSize']
+    cornerRadius = config['cornerRadius']
+    cupIconPath = config['cupIconPath']
+    chalIconPath = config['chalIconPath']
+    logoPath = config['logoPath']
     
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
@@ -218,7 +218,6 @@ async def main():
                 d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= textPrimaryColor))
         else:
             # line 1
-            # d.append(draw.Line(5, i, embedW-10, i, stroke=imageBackground, stroke_width=2))
             if(currentStart.date() == datetime.now().date()):
                 d.append(draw.Circle(26, i + 20, 16, fill=highlightColor))
                 d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=imageBackground))
