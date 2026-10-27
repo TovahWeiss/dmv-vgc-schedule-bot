@@ -66,7 +66,6 @@ def hasSanctionedUrl(e):
             return True
     return False
         
-
 def getEventTz(e):
     if isNonPremier(e):
        if not hasSanctionedUrl(e):

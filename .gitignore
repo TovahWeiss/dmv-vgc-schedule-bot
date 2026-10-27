@@ -3,3 +3,5 @@ token.json
 updateMessages.json
 .env
 *.png
+sampleData.json
+*.svg
