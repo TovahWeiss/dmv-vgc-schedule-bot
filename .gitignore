@@ -1,4 +1,4 @@
 .env
-output/
+output/*
 *.json
 !graphicConfig.json
