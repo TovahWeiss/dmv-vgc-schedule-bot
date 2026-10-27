@@ -145,16 +145,21 @@ async def main():
     embedH = 720
     embedW = 1280
     headerHeight = 100
+    margin = 5
+    headerColor = 'black'
     fFamily = "Arial"
     font_path = "assets/Montserrat-Italic-VariableFont_wght.ttf"
     rowIndex = 0
     rowHeight = 44
     rowScheduleStart = 140
-    imageBackground = 'white'
+    imageBackground = 'black'
     textPrimaryColor = 'black'
+    textHighlightColor = 'white'
     locationTextColor = 'grey'
     rowBackground = 'lightblue'
     highlightColor='dodgerblue'
+    logoSize = 90
+    cornerRadius = 10
     
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
@@ -162,7 +167,7 @@ async def main():
     existingEvents = [x for x in existingEvents if x['organizer']['email'] in [vaCalId, mdCalId, dcCalId]]
     
     d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fFamily)
-    d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
+    # d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
    
     #header branding
     with open(font_path, 'rb') as f:
@@ -178,14 +183,14 @@ async def main():
             font-family: 'Montserrat';
             font-weight: 900;
             font-size: 54px;
-            fill: #333333;
-            color: white;
+            font-style: italic;
+            font-width: ultra-expanded;
         }}
     """
     d.append_css(css_rules)
-    d.append(draw.Rectangle(0, 0, embedW, headerHeight, fill='lightgray'))
-    d.append(draw.Image( x=5, y=5, width=90, height=90,  path="assets/DMV_Falinks.png", embed=True) )
-    d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill= textPrimaryColor, center=True, class_='title-text')) 
+    d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=headerColor, rx=cornerRadius, ry=cornerRadius))
+    d.append(draw.Image( x=margin + 20, y=margin, width=logoSize, height=logoSize,  path="assets/DMV_Falinks.png", embed=True) )
+    d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill=textHighlightColor, center=True, class_='title-text')) 
         
     for i in range(headerHeight, embedH, rowHeight):
         if rowIndex > len(existingEvents)-1: 
@@ -197,17 +202,17 @@ async def main():
         currentStart = datetime.strptime(e['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z')
         if rowIndex < len(existingEvents)-1: 
             d.append(draw.Rectangle(5, i+10, embedW-10, rowHeight+20, fill=rowBackground))
-        d.append(draw.Rectangle(5, i, embedW-10, rowHeight, fill=rowBackground,  rx=10, ry=10))
+        d.append(draw.Rectangle(5, i, embedW-10, rowHeight, fill=rowBackground,  rx=cornerRadius, ry=cornerRadius))
            
         if(rowIndex != 0):
             previousStartDate = datetime.strptime(existingEvents[rowIndex-1]['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z').date()
             if(currentStart.date() != previousStartDate):
-                d.append(draw.Line(0, i, embedW, i, stroke=imageBackground, stroke_width=2))
+                d.append(draw.Line(margin, i, embedW-margin, i, stroke=imageBackground, stroke_width=2))
                 d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= textPrimaryColor))
                 d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= textPrimaryColor))
         else:
             # line 1
-            d.append(draw.Line(0, i, embedW, i, stroke=imageBackground, stroke_width=2))
+            # d.append(draw.Line(5, i, embedW-10, i, stroke=imageBackground, stroke_width=2))
             if(currentStart.date() == datetime.now().date()):
                 d.append(draw.Circle(26, i + 20, 16, fill=highlightColor))
                 d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=imageBackground))
