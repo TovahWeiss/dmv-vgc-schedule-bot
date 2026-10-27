@@ -19,9 +19,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 import drawsvg as draw
-import tkinter as tk
-from tkinter import font
-import base64
 
 load_dotenv() # load all the variables from the env file
 bot = discord.Bot()
@@ -404,7 +401,6 @@ async def checkAndDeleteEvents(playListings, existingCalEvents):
         print(error)      
 
 async def makeGraphic():
-        root = tk.Tk()
         
         with open("graphicConfig.json") as cfg:
             config = json.load(cfg)
@@ -509,7 +505,6 @@ async def makeGraphic():
             rowFontSize = 14
             emojiStart = 20
             emojiWidth = 20
-            fsPixels = font.Font(family= fontFamily, size=rowFontSize-2)
             
             icon = ''
             if(str(e['summary']).startswith('🥊')):
@@ -520,7 +515,7 @@ async def makeGraphic():
             
             titleStart = emojiStart + emojiWidth + 5
             title = str(e['summary'])[1:]
-            titleWidth = fsPixels.measure(title)
+            titleWidth = 8 * len(title)
             eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= textPrimaryColor))
             eventGroup.append(draw.Text(e['location'], rowFontSize, titleStart + titleWidth, 0, fill=locationTextColor))
             
