@@ -142,35 +142,41 @@ import base64
 
 async def main():
     root = tk.Tk()
-    embedH = 720
-    embedW = 1280
-    headerHeight = 100
-    margin = 5
-    headerColor = 'black'
-    fFamily = "Arial"
-    font_path = "assets/Montserrat-Italic-VariableFont_wght.ttf"
-    rowIndex = 0
-    rowHeight = 44
-    rowScheduleStart = 140
-    imageBackground = 'black'
-    textPrimaryColor = 'black'
-    textHighlightColor = 'white'
-    locationTextColor = 'grey'
-    rowBackground = 'lightblue'
-    highlightColor='dodgerblue'
-    logoSize = 90
-    cornerRadius = 10
+    
+    with open("graphicConfig.json") as cfg:
+        config = json.load(cfg)
+        embedH = config['embedH']
+        embedW = config['embedW']
+        headerHeight = config['headerHeight']
+        margin = config['margin']
+        headerColor = config['headerColor']
+        fontFamily = config['fontFamily']
+        fontPath = config['fontPath']
+        rowIndex = config['rowIndex']
+        rowHeight = config['rowHeight']
+        rowScheduleStart = config['rowScheduleStart']
+        imageBackground = config['imageBackground']
+        textPrimaryColor = config['textPrimaryColor']
+        textHighlightColor = config['textHighlightColor']
+        locationTextColor = config['locationTextColor']
+        rowBackground = config['rowBackground']
+        highlightColor = config['highlightColor']
+        logoSize = config['logoSize']
+        cornerRadius = config['cornerRadius']
+        cupIconPath = config['cupIconPath']
+        chalIconPath = config['chalIconPath']
+        logoPath = config['logoPath']
     
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
         return
     existingEvents = [x for x in existingEvents if x['organizer']['email'] in [vaCalId, mdCalId, dcCalId]]
     
-    d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fFamily)
+    d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fontFamily)
     # d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
    
     #header branding
-    with open(font_path, 'rb') as f:
+    with open(fontPath, 'rb') as f:
         ttf_bytes = f.read()
     b64_encoded = base64.b64encode(ttf_bytes).decode('utf-8')
     data_uri = f'data:font/ttf;base64,{b64_encoded}'
@@ -189,7 +195,7 @@ async def main():
     """
     d.append_css(css_rules)
     d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=headerColor, rx=cornerRadius, ry=cornerRadius))
-    d.append(draw.Image( x=margin + 20, y=margin, width=logoSize, height=logoSize,  path="assets/DMV_Falinks.png", embed=True) )
+    d.append(draw.Image( x=margin + 20, y=margin, width=logoSize, height=logoSize,  path=logoPath, embed=True) )
     d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill=textHighlightColor, center=True, class_='title-text')) 
         
     for i in range(headerHeight, embedH, rowHeight):
@@ -244,13 +250,13 @@ async def main():
         rowFontSize = 14
         emojiStart = 20
         emojiWidth = 20
-        fsPixels = font.Font(family= fFamily, size=rowFontSize-2)
+        fsPixels = font.Font(family= fontFamily, size=rowFontSize-2)
         
         icon = ''
         if(str(e['summary']).startswith('🥊')):
-            icon = 'assets/chal.png'                    
+            icon = chalIconPath                    
         elif(str(e['summary']).startswith('🏆')):
-            icon = "assets/cup.png"
+            icon = cupIconPath
         eventGroup.append(draw.Image( x=emojiStart, y= -20, width=emojiWidth, height=30,  path=icon, embed=True) )               
         
         titleStart = emojiStart + emojiWidth + 5

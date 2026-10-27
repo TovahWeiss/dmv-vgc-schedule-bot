@@ -1,0 +1,23 @@
+{
+    "embedH": 720,
+    "embedW": 1280,
+    "headerHeight": 100,
+    "margin": 5,
+    "headerColor": "black",
+    "fontFamily": "Arial",
+    "fontPath": "assets/Montserrat-Italic-VariableFont_wght.ttf",
+    "rowIndex": 0,
+    "rowHeight": 44,
+    "rowScheduleStart": 140,
+    "imageBackground": "black",
+    "textPrimaryColor": "black",
+    "textHighlightColor": "white",
+    "locationTextColor": "grey",
+    "rowBackground": "lightblue",
+    "highlightColor": "dodgerblue",
+    "logoSize": 90,
+    "cornerRadius": 10,
+    "logoPath": "assets/DMV_Falinks.png",
+    "cupIconPath": "assets/cup.png",
+    "chalIconPath": "assets/chal.png"
+}
