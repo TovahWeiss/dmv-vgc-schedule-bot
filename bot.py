@@ -405,7 +405,7 @@ async def getScreenshot(playwright: Playwright):
     page = await browser.new_page()
     await page.goto(schedView)
     await page.wait_for_timeout(2000)
-    await page.screenshot(path='schedule.png', full_page=True)
+    await page.screenshot(path='output/schedule.png', full_page=True)
     await browser.close()
 
 @bot.event
@@ -474,7 +474,7 @@ async def runUpdate():
     embed.url = allCalView
     
     # Display images or graphical assets
-    embed.set_image(url="attachment://schedule.png")
+    embed.set_image(url="attachment://output/schedule.png")
     
     curChannel = None
     curMessage = None
@@ -492,7 +492,7 @@ async def runUpdate():
         try: 
             channel = await bot.fetch_channel(curChannel)
             msg = await channel.fetch_message(curMessage)
-            await msg.edit(file=discord.File("schedule.png", filename="schedule.png"), embed=embed)
+            await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
         except discord.errors.NotFound as error:
             with open(messageListFile, 'r+') as file:
                 channels = json.load(file)
