@@ -426,6 +426,7 @@ async def makeGraphic():
         cupIconPath = config['cupIconPath']
         chalIconPath = config['chalIconPath']
         logoPath = config['logoPath']
+        graphicTitle = config['graphicTitle']
         
         existingEvents = await getExistingCalItems()
         if(existingEvents is None or len(existingEvents) == 0):
@@ -452,7 +453,7 @@ async def makeGraphic():
         d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=gradient2, rx=cornerRadius, ry=cornerRadius))
         
         d.append(draw.Image( x=margin + 20, y=margin, width=logoSize, height=logoSize,  path=logoPath, embed=True) )
-        d.append(draw.Text('DMV Upcoming Premier Events', 54, 640, 50, fill=headerTextColor, center=True, class_='title-text', font_family=headerFont)) 
+        d.append(draw.Text(graphicTitle, 54, 640, 50, fill=headerTextColor, center=True, class_='title-text', font_family=headerFont)) 
             
         for i in range(headerHeight, embedH, rowHeight):
             if rowIndex > len(existingEvents)-1: 

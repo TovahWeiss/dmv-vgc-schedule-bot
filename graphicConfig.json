@@ -20,5 +20,6 @@
     "cupIconPath": "assets/cup.png",
     "chalIconPath": "assets/chal.png",
     "headerGradientStartColor": "#D0EEF5",
-    "headerGradientEndColor": "#21B7D9"
+    "headerGradientEndColor": "#21B7D9",
+    "graphicTitle": "DMV Upcoming Premier Events"
 }
