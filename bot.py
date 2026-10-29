@@ -137,7 +137,13 @@ async def getVGEvents():
         response.raise_for_status()
 
         data = response.json()
-        data = sorted(data, key=lambda event: event['when'])
+        # pokedata sucks at deleting old info, best option i could think of
+        data = sorted(data, key=lambda event: ( datetime.strptime(event['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(event))), event['guid']))
+        for d in data:
+            d["dupeKey"] = d["shop"] + '~|~' + d["type"] + '~|~' + d["street_address"] + '~|~' +d["when"]  + '~|~' + d["name"]
+        seen = set()
+        data = [obj for obj in data if obj["dupeKey"]  not in seen and not seen.add(obj["dupeKey"])]
+                
         return data
 
     except requests.exceptions.RequestException as e:
@@ -266,7 +272,7 @@ async def pushToCal(data, existingEvents):
         if guidSearch:
             guids.append(guidSearch.group(0))  
 
-    now = datetime.now().astimezone()
+    now = datetime.now().astimezone() - timedelta(days=1)
     try:
         service = build("calendar", "v3", credentials=creds)
                 
@@ -283,8 +289,12 @@ async def pushToCal(data, existingEvents):
             typeLabel = ''
             emoji = ''
             if isNonPremier(e):
-                typeLabel = 'Friendly League'
-                emoji = '👥' 
+                if(hasSanctionedUrl(e)):
+                    typeLabel = 'Friendly Tournament'
+                    emoji = '👥' 
+                else:
+                    typeLabel = 'Open Play'
+                    emoji = '🅾️🅿️'
             else :
                 typeLabel = e['type']
                 if e['type'] == 'League Challenge VG':
