@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import json
+import subprocess
 import time
 import uuid
 import zoneinfo
@@ -684,4 +685,26 @@ async def manualsync(ctx: discord.ApplicationContext):
     await ctx.respond(content="forcing schedule update!", ephemeral=True)
     runUpdate.start()
 
+@bot.slash_command(name="updatelog", description="prints bot update log")
+async def updatelog(ctx: discord.ApplicationContext):
+    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True)
+        return
+    message = ""
+    try:
+        # Runs git log and limits the output to the last 5 entries
+        result = subprocess.run(
+            ["git", "log", "-n", "10", "--reverse", "--format=%ad - %s", "--date=short"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        message = f"```{result.stdout}```"
+    except subprocess.CalledProcessError as e:
+        message = f"Error running git log: {e.stderr}"
+    except FileNotFoundError:
+        message = "Git is not installed or not in your system PATH."
+    
+    await ctx.respond(message, ephemeral=True)
+        
 bot.run(os.getenv('TOKEN')) # run the bot with the token
