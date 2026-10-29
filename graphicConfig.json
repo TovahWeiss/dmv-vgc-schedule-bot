@@ -19,6 +19,7 @@
     "logoPath": "assets/DMV_Falinks.png",
     "cupIconPath": "assets/cup.png",
     "chalIconPath": "assets/chal.png",
+    "unknownIconPath": "assets/unknown.png",
     "headerGradientStartColor": "#D0EEF5",
     "headerGradientEndColor": "#21B7D9",
     "graphicTitle": "DMV Upcoming Premier Events"

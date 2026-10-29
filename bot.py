@@ -136,7 +136,7 @@ async def getVGEvents():
         response.raise_for_status()
 
         data = response.json()
-        sorted(data, key=lambda event: event['when'])
+        data = sorted(data, key=lambda event: event['when'])
         return data
 
     except requests.exceptions.RequestException as e:
@@ -427,11 +427,13 @@ async def makeGraphic():
         chalIconPath = config['chalIconPath']
         logoPath = config['logoPath']
         graphicTitle = config['graphicTitle']
+        unknownIconPath = config['unknownIconPath']
         
         existingEvents = await getExistingCalItems()
         if(existingEvents is None or len(existingEvents) == 0):
             return
         existingEvents = [x for x in existingEvents if x['organizer']['email'] in [vaCalId, mdCalId, dcCalId]]
+        existingEvents = sorted(existingEvents, key=lambda event: datetime.strptime(event['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z'))
         
         d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fontFamily)
         # d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
@@ -446,16 +448,16 @@ async def makeGraphic():
         """
         d.append_css(css_rules)
         
-        gradient2 = draw.LinearGradient(1, embedW/6, embedW/2, embedW/3)
-        gradient2.add_stop(0, headerGradientStartColor, 1)
-        gradient2.add_stop(1, headerGradientEndColor, 1)
+        gradient = draw.LinearGradient(1, embedW/6, embedW/2, embedW/3)
+        gradient.add_stop(0, headerGradientStartColor, 1)
+        gradient.add_stop(1, headerGradientEndColor, 1)
         d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill='white', rx=cornerRadius, ry=cornerRadius))
-        d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=gradient2, rx=cornerRadius, ry=cornerRadius))
+        d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=gradient, rx=cornerRadius, ry=cornerRadius))
         
         d.append(draw.Image( x=margin + 20, y=margin, width=logoSize, height=logoSize,  path=logoPath, embed=True) )
         d.append(draw.Text(graphicTitle, 54, 640, 50, fill=headerTextColor, center=True, class_='title-text', font_family=headerFont)) 
             
-        for i in range(headerHeight, embedH, rowHeight):
+        for i in range(headerHeight, embedH - rowHeight, rowHeight):
             if rowIndex > len(existingEvents)-1: 
                 continue
             e = existingEvents[rowIndex]
@@ -463,16 +465,16 @@ async def makeGraphic():
             
             #draw dividers if dif date from last and write date
             currentStart = datetime.strptime(e['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z')
-            if rowIndex < len(existingEvents)-1: 
-                d.append(draw.Rectangle(5, i+10, embedW-10, rowHeight+20, fill=rowBackground))
             d.append(draw.Rectangle(5, i, embedW-10, rowHeight, fill=rowBackground,  rx=cornerRadius, ry=cornerRadius))
                 
             if(rowIndex != 0):
                 previousStartDate = datetime.strptime(existingEvents[rowIndex-1]['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z').date()
                 if(currentStart.date() != previousStartDate):
-                    d.append(draw.Line(margin, i, embedW-margin, i, stroke=imageBackground, stroke_width=2))
+                    d.append(draw.Line(margin, i, embedW-margin, i, stroke=imageBackground, stroke_width=2))          
                     d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= textPrimaryColor))
                     d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= textPrimaryColor))
+                else:
+                    d.append(draw.Rectangle(margin, i-10, embedW-10, rowHeight, fill=rowBackground))
             else:
                 # line 1
                 if(currentStart.date() == datetime.now().date()):
@@ -507,7 +509,7 @@ async def makeGraphic():
             emojiStart = 20
             emojiWidth = 20
             
-            icon = ''
+            icon = unknownIconPath
             if(str(e['summary']).startswith('🥊')):
                 icon = chalIconPath                    
             elif(str(e['summary']).startswith('🏆')):
