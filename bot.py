@@ -13,11 +13,9 @@ import re
 from discord.ext import tasks
 from pathlib import Path
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.oauth2 import service_account
 
 import drawsvg as draw
 
@@ -25,6 +23,7 @@ load_dotenv() # load all the variables from the env file
 bot = discord.Bot()
 
 # If modifying these scopes, delete the file token.json.
+SERVICE_ACCOUNT_FILE = "svcAcct.json"
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 schedView ='https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=Premier%20Schedule&mode=AGENDA&src=MzQzYjc1MmFlOGIyOTQyZGJlOWEyZjJhYTMyYTA0NzBkNTBlY2ZjNDQwOWRmZmQxODM4NTFkN2Y0ZDM1YjI1YkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=OTI3MTI0ZmI3MTA5Y2U0YWRlNGMwOTgyNzc5NTFjZGRjODViMWIzZWM5NmYzYWY1M2Q0MjI3MmQwZjNiMGRmY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YjM5NWVlNGRkZDY0NzRkNjBhNjljOTExZDc2YzA0YmFkZjY0NDUxZTI2YTFkZmIxMDEyZjU2NDgyZGZmNTM4MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%237986cb&color=%23d50000&color=%23c0ca33'
 friendlySchedView ='https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=VGC%20Friendly%20Leagues&mode=AGENDA&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73'
@@ -93,6 +92,9 @@ def getEventCalId(e):
     
     return ''
 
+def getSACreds():
+    return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+
 async def getVGEvents():
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
 
@@ -150,22 +152,7 @@ async def getVGEvents():
         print(f"Error: {e}")
    
 async def getExistingCalItems():
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-    # Save the credentials for the next run
-    with open("token.json", "w") as token:
-        token.write(creds.to_json())
-
+    creds = getSACreds() 
     try:
         service = build("calendar", "v3", credentials=creds)
 
@@ -251,20 +238,7 @@ async def getExistingCalItems():
         print(f"An error occurred: {error}")
                  
 async def pushToCal(data, existingEvents):    
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-    with open("token.json", "w") as token:
-        token.write(creds.to_json())
+    creds = getSACreds() 
 
     guids = []
     for e in existingEvents:
@@ -321,20 +295,7 @@ async def pushToCal(data, existingEvents):
         print(f"An error occurred: {error}")
 
 async def checkAndUpdateEvents(playListings, existingCalEvents):
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-    with open("token.json", "w") as token:
-        token.write(creds.to_json())
+    creds = creds = getSACreds() 
         
     try:
         service = build("calendar", "v3", credentials=creds)
@@ -375,20 +336,7 @@ async def checkAndUpdateEvents(playListings, existingCalEvents):
         print(error)
  
 async def checkAndDeleteEvents(playListings, existingCalEvents):
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-    with open("token.json", "w") as token:
-        token.write(creds.to_json())
+    creds = getSACreds() 
         
     try:
         service = build("calendar", "v3", credentials=creds)
