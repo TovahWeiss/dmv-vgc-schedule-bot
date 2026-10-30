@@ -590,6 +590,7 @@ async def runUpdate():
 
             # rename temporary file replacing old file
             os.replace(tempfile, messageListFile)
+    print(f"update finished at {(datetime.now()).astimezone().isoformat()}")
         
 @bot.slash_command(name="sync", description="get dmv vgc schedule data")
 async def sync(ctx: discord.ApplicationContext):
