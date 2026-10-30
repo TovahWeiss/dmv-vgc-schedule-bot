@@ -170,7 +170,7 @@ async def getExistingCalItems():
         service = build("calendar", "v3", credentials=creds)
 
         # Call the Calendar API
-        now = (datetime.now() -  timedelta(hours=3)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
+        now = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
         events_result = (
             service.events()
             .list(
@@ -272,7 +272,7 @@ async def pushToCal(data, existingEvents):
         if guidSearch:
             guids.append(guidSearch.group(0))  
 
-    now = datetime.now().astimezone() - timedelta(days=1)
+    now = datetime.now().astimezone()
     try:
         service = build("calendar", "v3", credentials=creds)
                 
@@ -400,8 +400,10 @@ async def checkAndDeleteEvents(playListings, existingCalEvents):
                 
         popGuids = [x['guid'] for x in playListings]
         canceledEvents = [x for x in existingCalendarGuids if x not in popGuids]
-        
-        for calEvent in existingCalEvents:
+        tomorrow = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).astimezone()
+        futureEvents = [x for x in existingCalEvents if datetime.strptime(x['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z') > tomorrow]
+
+        for calEvent in futureEvents:
             guidSearch = re.search(guidRegex,  str(calEvent['description']))
             if guidSearch and guidSearch.group(0) in canceledEvents:                   
                 now = datetime.now().astimezone().isoformat()
