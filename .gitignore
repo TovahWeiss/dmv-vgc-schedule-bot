@@ -2,3 +2,4 @@
 output/*
 *.json
 !graphicConfig.json
+scriptingTest.py

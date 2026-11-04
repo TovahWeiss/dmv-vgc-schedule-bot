@@ -12,12 +12,12 @@ import os.path
 import re
 from discord.ext import tasks
 from pathlib import Path
-
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
-
 import drawsvg as draw
+from modules.GoogleCalendarEvent import GoogleCalendarEvent
+from modules.LocatorEvent import LocatorEvent
 
 load_dotenv() # load all the variables from the env file
 bot = discord.Bot()
@@ -95,7 +95,7 @@ def getEventCalId(e):
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
-async def getVGEvents():
+async def getVGEvents()-> list[LocatorEvent]:
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
 
     payload = {
@@ -145,13 +145,16 @@ async def getVGEvents():
             d["dupeKey"] = d["shop"] + '~|~' + d["type"] + '~|~' + d["street_address"] + '~|~' +d["when"]  + '~|~' + d["name"]
         seen = set()
         data = [obj for obj in data if obj["dupeKey"]  not in seen and not seen.add(obj["dupeKey"])]
-                
-        return data
+         
+        for obj in data:
+                    del obj["dupeKey"]
+                          
+        return [LocatorEvent.from_dict(item) for item in data]       
 
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
    
-async def getExistingCalItems():
+async def getExistingCalItems() -> list[GoogleCalendarEvent]:
     creds = getSACreds() 
     try:
         service = build("calendar", "v3", credentials=creds)
@@ -233,16 +236,16 @@ async def getExistingCalItems():
         if not events:
             return []
 
-        return events    
+        return [GoogleCalendarEvent.from_dict(event) for event in events]
     except HttpError as error:
         print(f"An error occurred: {error}")
                  
-async def pushToCal(data, existingEvents):    
+async def pushToCal(data: list[LocatorEvent], existingEvents: list[GoogleCalendarEvent]):
     creds = getSACreds() 
 
     guids = []
     for e in existingEvents:
-        guidSearch = re.search(guidRegex,  str(e['description']))
+        guidSearch = re.search(guidRegex,  e.description)
         if guidSearch:
             guids.append(guidSearch.group(0))  
 
@@ -250,9 +253,9 @@ async def pushToCal(data, existingEvents):
     try:
         service = build("calendar", "v3", credentials=creds)
                 
-        data = [x for x in data if x['guid'] not in guids]
+        data = [x for x in data if x.guid not in guids]
         for e in data:
-            startTime = datetime.strptime(e['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e)))
+            startTime = datetime.strptime(e.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e)))
             if startTime < now:
                 continue
             
@@ -270,16 +273,16 @@ async def pushToCal(data, existingEvents):
                     typeLabel = 'Open Play'
                     emoji = '🅾️🅿️'
             else :
-                typeLabel = e['type']
-                if e['type'] == 'League Challenge VG':
+                typeLabel = e.type
+                if e.type == 'League Challenge VG':
                     emoji = '🥊'
                 else:
                     emoji = '🏆'
                     
             event = {
-                'summary': emoji + ' ' + e['shop'] + ' ('+ e['state']+')',
-                'location': e['street_address'],
-                'description': typeLabel + ('\n<a href="' + e['pokemon_url']+ '">Official Event Page</a>' if hasSanctionedUrl(e) else '') + '\n\n\n' + e['guid'],
+                'summary': emoji + ' ' + e.shop + ' ('+ e.state+')',
+                'location': e.street_address,
+                'description': typeLabel + ('\n<a href="' + e.pokemon_url+ '">Official Event Page</a>' if hasSanctionedUrl(e) else '') + '\n\n\n' + e.guid,
                 'start': {
                     'dateTime': startTime.isoformat(),
                 },
@@ -294,26 +297,26 @@ async def pushToCal(data, existingEvents):
     except HttpError as error:
         print(f"An error occurred: {error}")
 
-async def checkAndUpdateEvents(playListings, existingCalEvents):
+async def checkAndUpdateEvents(playListings: list[LocatorEvent], existingCalEvents: list[GoogleCalendarEvent]):
     creds = creds = getSACreds() 
         
     try:
         service = build("calendar", "v3", credentials=creds)
         
         for calEvent in existingCalEvents:
-            guidSearch = re.search(guidRegex,  str(calEvent['description']))
+            guidSearch = re.search(guidRegex, calEvent.description)
             if guidSearch:
                 popId = guidSearch.group(0)
-                popEventMatches = [x for x in playListings if x['guid'] == popId]
+                popEventMatches = [x for x in playListings if x.guid == popId]
                                 
                 if len(popEventMatches) != 1:
                     continue
                 
                 popEvent = popEventMatches[0]
-                popWhenAdjusted = datetime.strptime(popEvent['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))).astimezone()
+                popWhenAdjusted = datetime.strptime(popEvent.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))).astimezone()
                 
                 # no update needed
-                if(str(calEvent['start']['dateTime']).replace('T', ' ') == str(popWhenAdjusted)):
+                if str(calEvent.start.dateTime).replace('T', ' ') == str(popWhenAdjusted):
                     continue
                        
                 endTime = popWhenAdjusted + timedelta(0,0,0,0,0,3)
@@ -329,34 +332,34 @@ async def checkAndUpdateEvents(playListings, existingCalEvents):
                 }
                 
                 now = datetime.now().astimezone().isoformat()
-                calEvent = service.events().patch(calendarId=calId, eventId=calEvent['id'], body=event).execute()
+                calEvent = service.events().patch(calendarId=calId, eventId=calEvent.id, body=event).execute()
                 print ('Event updated: %s at %s' % (calEvent.get('htmlLink'), now))
                           
     except HttpError as error:
         print(error)
  
-async def checkAndDeleteEvents(playListings, existingCalEvents):
+async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEvents: list[GoogleCalendarEvent]):
     creds = getSACreds() 
         
     try:
         service = build("calendar", "v3", credentials=creds)
         existingCalendarGuids = []
         for calEvent in existingCalEvents:
-            guidSearch = re.search(guidRegex,  str(calEvent['description']))
+            guidSearch = re.search(guidRegex, calEvent.description)
             if guidSearch:
                 existingCalendarGuids.append(guidSearch.group(0))
                 
-        popGuids = [x['guid'] for x in playListings]
+        popGuids = [x.guid for x in playListings]
         canceledEvents = [x for x in existingCalendarGuids if x not in popGuids]
         tomorrow = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).astimezone()
-        futureEvents = [x for x in existingCalEvents if datetime.strptime(x['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z') > tomorrow]
+        futureEvents = [x for x in existingCalEvents if datetime.strptime(x.start.dateTime, '%Y-%m-%dT%H:%M:%S%z') > tomorrow]
 
         for calEvent in futureEvents:
-            guidSearch = re.search(guidRegex,  str(calEvent['description']))
+            guidSearch = re.search(guidRegex, calEvent.description)
             if guidSearch and guidSearch.group(0) in canceledEvents:                   
                 now = datetime.now().astimezone().isoformat()
-                service.events().delete(calendarId=calEvent['organizer']['email'], eventId=calEvent['id']).execute()
-                print ('Event deleted: %s at %s' % (calEvent['summary'], now))
+                service.events().delete(calendarId=calEvent.organizer.email, eventId=calEvent.id).execute()
+                print ('Event deleted: %s at %s' % (calEvent.summary, now))
                           
     except HttpError as error:
         print(error)      
@@ -392,8 +395,8 @@ async def makeGraphic():
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
         return
-    existingEvents = [x for x in existingEvents if x['organizer']['email'] in [vaCalId, mdCalId, dcCalId]]
-    existingEvents = sorted(existingEvents, key=lambda event: datetime.strptime(event['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z'))
+    existingEvents = [x for x in existingEvents if x.organizer.email in [vaCalId, mdCalId, dcCalId]]
+    existingEvents = sorted(existingEvents, key=lambda event: datetime.strptime(event.start.dateTime, '%Y-%m-%dT%H:%M:%S%z'))
     
     d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fontFamily)
     # d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
@@ -424,11 +427,11 @@ async def makeGraphic():
         rowBaseline = i + 26
         
         #draw dividers if dif date from last and write date
-        currentStart = datetime.strptime(e['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z')
+        currentStart = datetime.strptime(e.start.dateTime, '%Y-%m-%dT%H:%M:%S%z')
         d.append(draw.Rectangle(5, i, embedW-10, rowHeight, fill=rowBackground,  rx=cornerRadius, ry=cornerRadius))
             
         if(rowIndex != 0):
-            previousStartDate = datetime.strptime(existingEvents[rowIndex-1]['start']['dateTime'], '%Y-%m-%dT%H:%M:%S%z').date()
+            previousStartDate = datetime.strptime(existingEvents[rowIndex-1].start.dateTime, '%Y-%m-%dT%H:%M:%S%z').date()
             if(currentStart.date() != previousStartDate):
                 d.append(draw.Line(margin, i, embedW-margin, i, stroke=imageBackground, stroke_width=2))          
                 d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= textPrimaryColor))
@@ -447,11 +450,11 @@ async def makeGraphic():
         
         
         color = textPrimaryColor
-        if(e['organizer']['email'] == vaCalId):
+        if e.organizer.email == vaCalId:
             color = 'green'
-        elif(e['organizer']['email'] == dcCalId):
+        elif e.organizer.email == dcCalId:
             color = 'purple'
-        elif(e['organizer']['email'] == mdCalId):
+        elif e.organizer.email == mdCalId:
             color = 'red'
                 
         rowGroup = draw.Group()
@@ -470,17 +473,17 @@ async def makeGraphic():
         emojiWidth = 20
         
         icon = unknownIconPath
-        if(str(e['summary']).startswith('🥊')):
+        if e.summary.startswith('🥊'):
             icon = chalIconPath                    
-        elif(str(e['summary']).startswith('🏆')):
+        elif e.summary.startswith('🏆'):
             icon = cupIconPath
         eventGroup.append(draw.Image( x=emojiStart, y= -20, width=emojiWidth, height=30,  path=icon, embed=True) )               
         
         titleStart = emojiStart + emojiWidth + 5
-        title = str(e['summary'])[1:]
+        title = e.summary[1:]
         titleWidth = 8 * len(title)
         eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= textPrimaryColor))
-        eventGroup.append(draw.Text(e['location'], rowFontSize, titleStart + titleWidth, 0, fill=locationTextColor))
+        eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=locationTextColor))
         
         rowGroup.append(draw.Use(schedGroup, 0, 0))
         rowGroup.append(draw.Use(eventGroup, 120, 0))
