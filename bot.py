@@ -17,6 +17,7 @@ from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 import drawsvg as draw
 from modules.CalendarConfig import CalendarConfig
+from modules.CalendarViewsConfig import CalendarViewsConfig
 from modules.GraphicConfig import GraphicConfig
 from modules.GoogleCalendarEvent import GoogleCalendarEvent
 from modules.LocatorEvent import LocatorEvent
@@ -27,21 +28,22 @@ bot = discord.Bot()
 # If modifying these scopes, delete the file token.json.
 SERVICE_ACCOUNT_FILE = "svcAcct.json"
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
-schedView ='https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=Premier%20Schedule&mode=AGENDA&src=MzQzYjc1MmFlOGIyOTQyZGJlOWEyZjJhYTMyYTA0NzBkNTBlY2ZjNDQwOWRmZmQxODM4NTFkN2Y0ZDM1YjI1YkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=OTI3MTI0ZmI3MTA5Y2U0YWRlNGMwOTgyNzc5NTFjZGRjODViMWIzZWM5NmYzYWY1M2Q0MjI3MmQwZjNiMGRmY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YjM5NWVlNGRkZDY0NzRkNjBhNjljOTExZDc2YzA0YmFkZjY0NDUxZTI2YTFkZmIxMDEyZjU2NDgyZGZmNTM4MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%237986cb&color=%23d50000&color=%23c0ca33'
-friendlySchedView ='https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=VGC%20Friendly%20Leagues&mode=AGENDA&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73'
-
-
-allCalView = 'https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=All%20DMV%20VGC%20Events&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=MzQzYjc1MmFlOGIyOTQyZGJlOWEyZjJhYTMyYTA0NzBkNTBlY2ZjNDQwOWRmZmQxODM4NTFkN2Y0ZDM1YjI1YkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=OTI3MTI0ZmI3MTA5Y2U0YWRlNGMwOTgyNzc5NTFjZGRjODViMWIzZWM5NmYzYWY1M2Q0MjI3MmQwZjNiMGRmY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YjM5NWVlNGRkZDY0NzRkNjBhNjljOTExZDc2YzA0YmFkZjY0NDUxZTI2YTFkZmIxMDEyZjU2NDgyZGZmNTM4MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73&color=%237986cb&color=%23d50000&color=%23c0ca33'
-friendlyCalView = 'https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=VGC%20Friendly%20Leagues&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73'
 
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
-nonPremierEventType = 'nonpremier VG'
 
 messageListFile = 'configs/messageConfigs.json'
 
 with open("configs/calendarConfigs.json") as cfg:
     calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
     print(f"Loaded {len(calendarConfigs)} calendar configs from file")
+
+with open("configs/calendarViewsConfig.json") as cfg:
+    calendarViewsConfig = CalendarViewsConfig.from_dict(json.load(cfg))
+    print(f"Loaded calendar views config from file")
+    
+with open("configs/graphicConfig.json") as cfg:
+    graphicConfig = GraphicConfig.from_dict(json.load(cfg))
+    print(f"Loaded graphic config from file")
     
 def getEventCalId(e: LocatorEvent) -> str:
     cal = [x for x in calendarConfigs if e.state == x.state]
@@ -271,10 +273,7 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
     except HttpError as error:
         print(error)      
 
-async def makeGraphic():
-    with open("configs/graphicConfig.json") as cfg:
-        graphicConfig = GraphicConfig.from_dict(json.load(cfg))
-    
+async def makeGraphic():    
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
         return
@@ -404,15 +403,16 @@ async def runUpdate():
         color=discord.Color.yellow()
     )
     
+    
     embed.add_field(
         name="Premier Events", 
-        value="[Click here to sync to your calendar](https://calendar.google.com/calendar/u/0/r?cid=343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com&cid=927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com&cid=b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com)"
+        value=f"[Click here to sync to your calendar]({calendarViewsConfig.premierSync})"
         , inline=True
     )
     
     embed.add_field(
         name="Upcoming Premier Events", 
-        value=f"[View Premier Schedule]({schedView})"
+        value=f"[View Premier Schedule]({calendarViewsConfig.schedView})"
         , inline=True
     )
     
@@ -424,13 +424,13 @@ async def runUpdate():
     
     embed.add_field(
         name="League/Friendly Events", 
-        value="[Click here to sync to your calendar](https://calendar.google.com/calendar/u/0/r?cid=eb5d9c46e85780cbe9b0df36585ab52fc932a59e1c5e49760135e7f26606da4a@group.calendar.google.com&cid=873fa813d71d99c7351e407086eb0e9d7208c70533dc8ca11e3564852e053448@group.calendar.google.com&cid=ad51dc180f1337ccc228f8f61973408d9cc7e74871cb61e8fc0ea27203e4e210@group.calendar.google.com)"
+        value=f"[Click here to sync to your calendar]({calendarViewsConfig.friendlySync})"
         , inline=True
     )
     
     embed.add_field(
         name="Upcoming Friendly Events",
-        value=f"[View Leage Schedule]({friendlySchedView})"
+        value=f"[View Friendly Schedule]({calendarViewsConfig.friendlySchedView})"
         ,inline=True
     )
     
@@ -440,7 +440,7 @@ async def runUpdate():
         , inline=False
     )
     
-    embed.url = allCalView
+    embed.url = calendarViewsConfig.allCalView
     
     # Display images or graphical assets
     embed.set_image(url="attachment://output/schedule.png")
@@ -493,7 +493,7 @@ async def sync(ctx: discord.ApplicationContext):
         , inline=True
     )
        
-    embed.url = allCalView
+    embed.url = calendarViewsConfig.allCalView
     await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True)
     message = await ctx.send(embed=embed) 
     
