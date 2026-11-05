@@ -1,5 +1,7 @@
 from dataclasses import asdict, dataclass
+import re
 
+__nonPremierEventType = 'nonpremier VG'
 
 @dataclass
 class LocatorEvent:
@@ -38,3 +40,18 @@ class LocatorEvent:
 
     def to_dict(self):
         return asdict(self)
+    
+    def isNonPremier(self) -> bool:
+        return self.type == __nonPremierEventType
+    
+    def hasSanctionedUrl(e: LocatorEvent) -> bool:
+        tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"
+        guidSearch = re.search(tournamentUrlEnding,  e.pokemon_url)
+        if guidSearch:
+            return True
+        return False
+    
+    def getEventTz(self) -> str:
+        if self.isNonPremier() and not self.hasSanctionedUrl():
+            return 'UTC'
+        return 'America/New_York'

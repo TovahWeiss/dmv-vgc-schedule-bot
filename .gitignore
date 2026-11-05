@@ -3,3 +3,5 @@ output/*
 *.json
 !graphicConfig.json
 scriptingTest.py
+
+modules/__pycache__/

@@ -44,37 +44,10 @@ guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 nonPremierEventType = 'nonpremier VG'
 
 messageListFile = 'updateMessages.json'
-
-def isNonPremier(e):
-    try:
-        if(e['type']):
-            return e['type'] == nonPremierEventType
-        return nonPremierEventType in str(e['description'])
-    except:
-        print('could not determine type of event for:' + e)
-        return False
-
-def hasSanctionedUrl(e):
-    tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"
-    if(e['pokemon_url']):
-        guidSearch = re.search(tournamentUrlEnding,  str(e['pokemon_url']))
-        if guidSearch:
-           return True
-    elif(e['description']):
-        guidSearch = re.search(tournamentUrlEnding,  str(e['pokemon_url']))
-        if guidSearch:
-            return True
-    return False
         
-def getEventTz(e):
-    if isNonPremier(e):
-       if not hasSanctionedUrl(e):
-        return 'UTC'
-    return 'America/New_York'
-
-def getEventCalId(e):
-    if(isNonPremier(e)):
-        match e['state']:
+def getEventCalId(e: LocatorEvent) -> str:
+    if e.isNonPremier():
+        match e.state:
             case 'Virginia':
                 return friendlyVaCalId
             case 'Maryland':
@@ -82,14 +55,13 @@ def getEventCalId(e):
             case 'District of Columbia':
                 return friendlyDcCalId
     else:
-        match e['state']:
+        match e.state:
             case 'Virginia':
                 return vaCalId
             case 'Maryland':
                 return mdCalId
             case 'District of Columbia':
                 return dcCalId
-    
     return ''
 
 def getSACreds():
@@ -140,7 +112,7 @@ async def getVGEvents()-> list[LocatorEvent]:
 
         data = response.json()
         # pokedata sucks at deleting old info, best option i could think of
-        data = sorted(data, key=lambda event: ( datetime.strptime(event['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(event))), event['guid']))
+        data = sorted(data, key=lambda event: ( datetime.strptime(event['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(LocatorEvent.from_dict(event).getEventTz())), event['guid']))
         for d in data:
             d["dupeKey"] = d["shop"] + '~|~' + d["type"] + '~|~' + d["street_address"] + '~|~' +d["when"]  + '~|~' + d["name"]
         seen = set()
@@ -255,7 +227,7 @@ async def pushToCal(data: list[LocatorEvent], existingEvents: list[GoogleCalenda
                 
         data = [x for x in data if x.guid not in guids]
         for e in data:
-            startTime = datetime.strptime(e.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(e)))
+            startTime = datetime.strptime(e.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(e.getEventTz()))
             if startTime < now:
                 continue
             
@@ -265,8 +237,8 @@ async def pushToCal(data: list[LocatorEvent], existingEvents: list[GoogleCalenda
             
             typeLabel = ''
             emoji = ''
-            if isNonPremier(e):
-                if(hasSanctionedUrl(e)):
+            if e.isNonPremier():
+                if(e.hasSanctionedUrl()):
                     typeLabel = 'Friendly Tournament'
                     emoji = '👥' 
                 else:
@@ -282,7 +254,7 @@ async def pushToCal(data: list[LocatorEvent], existingEvents: list[GoogleCalenda
             event = {
                 'summary': emoji + ' ' + e.shop + ' ('+ e.state+')',
                 'location': e.street_address,
-                'description': typeLabel + ('\n<a href="' + e.pokemon_url+ '">Official Event Page</a>' if hasSanctionedUrl(e) else '') + '\n\n\n' + e.guid,
+                'description': typeLabel + ('\n<a href="' + e.pokemon_url+ '">Official Event Page</a>' if e.hasSanctionedUrl() else '') + '\n\n\n' + e.guid,
                 'start': {
                     'dateTime': startTime.isoformat(),
                 },
@@ -313,7 +285,7 @@ async def checkAndUpdateEvents(playListings: list[LocatorEvent], existingCalEven
                     continue
                 
                 popEvent = popEventMatches[0]
-                popWhenAdjusted = datetime.strptime(popEvent.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(getEventTz(popEvent))).astimezone()
+                popWhenAdjusted = datetime.strptime(popEvent.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(popEvent.getEventTz())).astimezone()
                 
                 # no update needed
                 if str(calEvent.start.dateTime).replace('T', ' ') == str(popWhenAdjusted):

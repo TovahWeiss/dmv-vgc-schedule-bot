@@ -1,5 +1,7 @@
 from dataclasses import asdict, dataclass
+import re
 
+__nonPremierEventType = 'nonpremier VG'
 
 @dataclass
 class CalendarPerson:
@@ -76,3 +78,18 @@ class GoogleCalendarEvent:
         event_data["start"] = self.start.to_dict()
         event_data["end"] = self.end.to_dict()
         return event_data
+
+    def isNonPremier(self) -> bool:
+        return __nonPremierEventType in self.description
+    
+    def hasSanctionedUrl(e: GoogleCalendarEvent) -> bool:
+        tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"
+        guidSearch = re.search(tournamentUrlEnding,  e.description)
+        if guidSearch:
+            return True
+        return False
+    
+    def getEventTz(self) -> str:
+        if self.isNonPremier() and not self.hasSanctionedUrl():
+            return 'UTC'
+        return 'America/New_York'
