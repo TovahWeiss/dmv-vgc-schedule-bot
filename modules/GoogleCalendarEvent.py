@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 import re
 
-__nonPremierEventType = 'nonpremier VG'
+nonPremierEventType = 'nonpremier VG'
 
 @dataclass
 class CalendarPerson:
@@ -80,7 +80,7 @@ class GoogleCalendarEvent:
         return event_data
 
     def isNonPremier(self) -> bool:
-        return __nonPremierEventType in self.description
+        return nonPremierEventType in self.description
     
     def hasSanctionedUrl(e: GoogleCalendarEvent) -> bool:
         tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"

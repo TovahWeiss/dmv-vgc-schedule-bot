@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 import re
 
-__nonPremierEventType = 'nonpremier VG'
+nonPremierEventType = 'nonpremier VG'
 
 @dataclass
 class LocatorEvent:
@@ -42,7 +42,7 @@ class LocatorEvent:
         return asdict(self)
     
     def isNonPremier(self) -> bool:
-        return self.type == __nonPremierEventType
+        return self.type == nonPremierEventType
     
     def hasSanctionedUrl(e: LocatorEvent) -> bool:
         tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"
