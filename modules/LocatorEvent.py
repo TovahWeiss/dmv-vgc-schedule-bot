@@ -44,9 +44,9 @@ class LocatorEvent:
     def isNonPremier(self) -> bool:
         return self.type == nonPremierEventType
     
-    def hasSanctionedUrl(e: LocatorEvent) -> bool:
+    def hasSanctionedUrl(self) -> bool:
         tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"
-        guidSearch = re.search(tournamentUrlEnding,  e.pokemon_url)
+        guidSearch = re.search(tournamentUrlEnding,  self.pokemon_url)
         if guidSearch:
             return True
         return False

@@ -82,9 +82,9 @@ class GoogleCalendarEvent:
     def isNonPremier(self) -> bool:
         return nonPremierEventType in self.description
     
-    def hasSanctionedUrl(e: GoogleCalendarEvent) -> bool:
+    def hasSanctionedUrl(self) -> bool:
         tournamentUrlEnding = r"/[0-9]{2}-[0-9]{1,2}-[0-9]*/"
-        guidSearch = re.search(tournamentUrlEnding,  e.description)
+        guidSearch = re.search(tournamentUrlEnding,  self.description)
         if guidSearch:
             return True
         return False
