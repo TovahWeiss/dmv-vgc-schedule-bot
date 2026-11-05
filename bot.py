@@ -16,6 +16,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 import drawsvg as draw
+from modules.GraphicConfig import GraphicConfig
 from modules.GoogleCalendarEvent import GoogleCalendarEvent
 from modules.LocatorEvent import LocatorEvent
 
@@ -338,31 +339,7 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
 
 async def makeGraphic():
     with open("graphicConfig.json") as cfg:
-        config = json.load(cfg)
-    embedH = config['embedH']
-    embedW = config['embedW']
-    headerHeight = config['headerHeight']
-    margin = config['margin']
-    headerGradientStartColor = config['headerGradientStartColor']
-    headerGradientEndColor = config['headerGradientEndColor']
-    headerFont = config['headerFont']
-    fontFamily = config['fontFamily']
-    rowIndex = config['rowIndex']
-    rowHeight = config['rowHeight']
-    rowScheduleStart = config['rowScheduleStart']
-    imageBackground = config['imageBackground']
-    textPrimaryColor = config['textPrimaryColor']
-    headerTextColor = config['headerTextColor']
-    locationTextColor = config['locationTextColor']
-    rowBackground = config['rowBackground']
-    highlightColor = config['highlightColor']
-    logoSize = config['logoSize']
-    cornerRadius = config['cornerRadius']
-    cupIconPath = config['cupIconPath']
-    chalIconPath = config['chalIconPath']
-    logoPath = config['logoPath']
-    graphicTitle = config['graphicTitle']
-    unknownIconPath = config['unknownIconPath']
+        config = GraphicConfig.from_dict(json.load(cfg))
     
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
@@ -370,7 +347,7 @@ async def makeGraphic():
     existingEvents = [x for x in existingEvents if x.organizer.email in [vaCalId, mdCalId, dcCalId]]
     existingEvents = sorted(existingEvents, key=lambda event: datetime.strptime(event.start.dateTime, '%Y-%m-%dT%H:%M:%S%z'))
     
-    d = draw.Drawing(embedW, embedH, origin='top-left', font_family=fontFamily)
+    d = draw.Drawing(config.embedW, config.embedH, origin='top-left', font_family=config.fontFamily)
     # d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
     
     #header branding
@@ -383,16 +360,17 @@ async def makeGraphic():
     """
     d.append_css(css_rules)
     
-    gradient = draw.LinearGradient(1, embedW/6, embedW/2, embedW/3)
-    gradient.add_stop(0, headerGradientStartColor, 1)
-    gradient.add_stop(1, headerGradientEndColor, 1)
-    d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill='white', rx=cornerRadius, ry=cornerRadius))
-    d.append(draw.Rectangle(margin, 0, embedW - (2*margin), headerHeight, fill=gradient, rx=cornerRadius, ry=cornerRadius))
+    gradient = draw.LinearGradient(1, config.embedW/6, config.embedW/2, config.embedW/3)
+    gradient.add_stop(0, config.headerGradientStartColor, 1)
+    gradient.add_stop(1, config.headerGradientEndColor, 1)
+    d.append(draw.Rectangle(config.margin, 0, config.embedW - (2*config.margin), config.headerHeight, fill='white', rx=config.cornerRadius, ry=config.cornerRadius))
+    d.append(draw.Rectangle(config.margin, 0, config.embedW - (2*config.margin), config.headerHeight, fill=gradient, rx=config.cornerRadius, ry=config.cornerRadius))
     
-    d.append(draw.Image( x=margin + 20, y=margin, width=logoSize, height=logoSize,  path=logoPath, embed=True) )
-    d.append(draw.Text(graphicTitle, 54, 640, 50, fill=headerTextColor, center=True, class_='title-text', font_family=headerFont)) 
-        
-    for i in range(headerHeight, embedH - rowHeight, rowHeight):
+    d.append(draw.Image( x=config.margin + 20, y=config.margin, width=config.logoSize, height=config.logoSize,  path=config.logoPath, embed=True) )
+    d.append(draw.Text(config.graphicTitle, 54, 640, 50, fill=config.headerTextColor, center=True, class_='title-text', font_family=config.headerFont)) 
+    
+    rowIndex = 0
+    for i in range(config.headerHeight, config.embedH - config.rowHeight, config.rowHeight):
         if rowIndex > len(existingEvents)-1: 
             continue
         e = existingEvents[rowIndex]
@@ -400,28 +378,28 @@ async def makeGraphic():
         
         #draw dividers if dif date from last and write date
         currentStart = datetime.strptime(e.start.dateTime, '%Y-%m-%dT%H:%M:%S%z')
-        d.append(draw.Rectangle(5, i, embedW-10, rowHeight, fill=rowBackground,  rx=cornerRadius, ry=cornerRadius))
+        d.append(draw.Rectangle(5, i, config.embedW-10, config.rowHeight, fill=config.rowBackground,  rx=config.cornerRadius, ry=config.cornerRadius))
             
         if(rowIndex != 0):
             previousStartDate = datetime.strptime(existingEvents[rowIndex-1].start.dateTime, '%Y-%m-%dT%H:%M:%S%z').date()
             if(currentStart.date() != previousStartDate):
-                d.append(draw.Line(margin, i, embedW-margin, i, stroke=imageBackground, stroke_width=2))          
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= textPrimaryColor))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= textPrimaryColor))
+                d.append(draw.Line(config.margin, i, config.embedW-config.margin, i, stroke=config.imageBackground, stroke_width=2))          
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= config.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= config.textPrimaryColor))
             else:
-                d.append(draw.Rectangle(margin, i-10, embedW-10, rowHeight, fill=rowBackground))
+                d.append(draw.Rectangle(config.margin, i-10, config.embedW-10, config.rowHeight, fill=config.rowBackground))
         else:
             # line 1
             if(currentStart.date() == datetime.now().date()):
-                d.append(draw.Circle(26, i + 20, 16, fill=highlightColor))
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=imageBackground))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill=highlightColor))
+                d.append(draw.Circle(26, i + 20, 16, fill=config.highlightColor))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=config.imageBackground))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill=config.highlightColor))
             else:
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= textPrimaryColor))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= config.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= config.textPrimaryColor))
         
         
-        color = textPrimaryColor
+        color = config.textPrimaryColor
         if e.organizer.email == vaCalId:
             color = 'green'
         elif e.organizer.email == dcCalId:
@@ -436,7 +414,7 @@ async def makeGraphic():
         bullet = draw.Circle(0, -4 , 6, fill=color)
         schedGroup.append(bullet) # Draw a circle
         startTime = currentStart.strftime("%I:%M%p")
-        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill= textPrimaryColor))
+        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill= config.textPrimaryColor))
             
     # event data
         eventGroup = draw.Group()
@@ -444,23 +422,23 @@ async def makeGraphic():
         emojiStart = 20
         emojiWidth = 20
         
-        icon = unknownIconPath
+        icon = config.unknownIconPath
         if e.summary.startswith('🥊'):
-            icon = chalIconPath                    
+            icon = config.chalIconPath                    
         elif e.summary.startswith('🏆'):
-            icon = cupIconPath
+            icon = config.cupIconPath
         eventGroup.append(draw.Image( x=emojiStart, y= -20, width=emojiWidth, height=30,  path=icon, embed=True) )               
         
         titleStart = emojiStart + emojiWidth + 5
         title = e.summary[1:]
         titleWidth = 8 * len(title)
-        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= textPrimaryColor))
-        eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=locationTextColor))
+        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= config.textPrimaryColor))
+        eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=config.locationTextColor))
         
         rowGroup.append(draw.Use(schedGroup, 0, 0))
         rowGroup.append(draw.Use(eventGroup, 120, 0))
         
-        d.append(draw.Use(rowGroup, rowScheduleStart, rowBaseline))
+        d.append(draw.Use(rowGroup, config.rowScheduleStart, rowBaseline))
         rowIndex += 1
 
     d.set_pixel_scale(2)  # Set number of pixels per geometry unit

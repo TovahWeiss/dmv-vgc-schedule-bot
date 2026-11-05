@@ -5,7 +5,6 @@
     "margin": 5,
     "headerFont":"'Noto Sans Black', Impact",
     "fontFamily": "Arial",
-    "rowIndex": 0,
     "rowHeight": 44,
     "rowScheduleStart": 140,
     "imageBackground": "black",
