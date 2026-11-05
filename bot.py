@@ -105,7 +105,7 @@ async def getVGEvents()-> list[LocatorEvent]:
         for obj in data:
                     del obj["dupeKey"]
                           
-        return []       
+        return [LocatorEvent.from_dict(item) for item in data]  
 
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
@@ -113,10 +113,10 @@ async def getVGEvents()-> list[LocatorEvent]:
 async def getExistingCalItems() -> list[GoogleCalendarEvent]:
     now = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
     creds = getSACreds() 
+    events = []
     try:
         service = build("calendar", "v3", credentials=creds)
         for cal in calendarConfigs:
-            print(cal.state + ' - ' + cal.calendarId + ' - ' + cal.friendlyCalId)
             events_result = (
                 service.events()
                 .list(
@@ -127,7 +127,7 @@ async def getExistingCalItems() -> list[GoogleCalendarEvent]:
                 )
                 .execute()
             )
-            events = events_result.get("items", [])
+            events = events + events_result.get("items", [])
 
             events_result = (
                     service.events()
@@ -143,7 +143,6 @@ async def getExistingCalItems() -> list[GoogleCalendarEvent]:
                 
         if not events:
             return []
-
         return [GoogleCalendarEvent.from_dict(event) for event in events]
     except HttpError as error:
         print(f"An error occurred: {error}")
@@ -394,7 +393,7 @@ async def runUpdate():
     data = await getVGEvents()
     existingEvents = await getExistingCalItems()
     
-    # await pushToCal(data, existingEvents)
+    await pushToCal(data, existingEvents)
     await checkAndUpdateEvents(data, existingEvents)
     await checkAndDeleteEvents(data, existingEvents)
     
