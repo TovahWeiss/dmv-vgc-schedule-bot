@@ -16,6 +16,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 import drawsvg as draw
+from modules.CalendarConfig import CalendarConfig
 from modules.GraphicConfig import GraphicConfig
 from modules.GoogleCalendarEvent import GoogleCalendarEvent
 from modules.LocatorEvent import LocatorEvent
@@ -33,37 +34,19 @@ friendlySchedView ='https://calendar.google.com/calendar/embed?height=600&wkst=1
 allCalView = 'https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=All%20DMV%20VGC%20Events&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=MzQzYjc1MmFlOGIyOTQyZGJlOWEyZjJhYTMyYTA0NzBkNTBlY2ZjNDQwOWRmZmQxODM4NTFkN2Y0ZDM1YjI1YkBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=OTI3MTI0ZmI3MTA5Y2U0YWRlNGMwOTgyNzc5NTFjZGRjODViMWIzZWM5NmYzYWY1M2Q0MjI3MmQwZjNiMGRmY0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YjM5NWVlNGRkZDY0NzRkNjBhNjljOTExZDc2YzA0YmFkZjY0NDUxZTI2YTFkZmIxMDEyZjU2NDgyZGZmNTM4MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73&color=%237986cb&color=%23d50000&color=%23c0ca33'
 friendlyCalView = 'https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FNew_York&showPrint=0&title=VGC%20Friendly%20Leagues&src=ZWI1ZDljNDZlODU3ODBjYmU5YjBkZjM2NTg1YWI1MmZjOTMyYTU5ZTFjNWU0OTc2MDEzNWU3ZjI2NjA2ZGE0YUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=ODczZmE4MTNkNzFkOTljNzM1MWU0MDcwODZlYjBlOWQ3MjA4YzcwNTMzZGM4Y2ExMWUzNTY0ODUyZTA1MzQ0OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&src=YWQ1MWRjMTgwZjEzMzdjY2MyMjhmOGY2MTk3MzQwOGQ5Y2M3ZTc0ODcxY2I2MWU4ZmMwZWEyNzIwM2U0ZTIxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457&color=%23e4c441&color=%23e67c73'
 
-vaCalId = 'b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com'
-mdCalId = '927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com'
-dcCalId = '343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com'
-
-friendlyVaCalId = 'ad51dc180f1337ccc228f8f61973408d9cc7e74871cb61e8fc0ea27203e4e210@group.calendar.google.com'
-friendlyMdCalId = '873fa813d71d99c7351e407086eb0e9d7208c70533dc8ca11e3564852e053448@group.calendar.google.com'
-friendlyDcCalId = 'eb5d9c46e85780cbe9b0df36585ab52fc932a59e1c5e49760135e7f26606da4a@group.calendar.google.com'
-
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 nonPremierEventType = 'nonpremier VG'
 
-messageListFile = 'updateMessages.json'
-        
+messageListFile = 'configs/messageConfigs.json'
+
+with open("configs/calendarConfigs.json") as cfg:
+    calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
+    print(f"Loaded {len(calendarConfigs)} calendar configs from file")
+    
 def getEventCalId(e: LocatorEvent) -> str:
-    if e.isNonPremier():
-        match e.state:
-            case 'Virginia':
-                return friendlyVaCalId
-            case 'Maryland':
-                return friendlyMdCalId
-            case 'District of Columbia':
-                return friendlyDcCalId
-    else:
-        match e.state:
-            case 'Virginia':
-                return vaCalId
-            case 'Maryland':
-                return mdCalId
-            case 'District of Columbia':
-                return dcCalId
-    return ''
+    cal = [x for x in calendarConfigs if e.state == x.state]
+    if cal and len(cal) > 0:
+        return cal[0].friendlyCalId if e.isNonPremier() else cal[0].calendarId
 
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
@@ -122,90 +105,41 @@ async def getVGEvents()-> list[LocatorEvent]:
         for obj in data:
                     del obj["dupeKey"]
                           
-        return [LocatorEvent.from_dict(item) for item in data]       
+        return []       
 
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
    
 async def getExistingCalItems() -> list[GoogleCalendarEvent]:
+    now = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
     creds = getSACreds() 
     try:
         service = build("calendar", "v3", credentials=creds)
-
-        # Call the Calendar API
-        now = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
-        events_result = (
-            service.events()
-            .list(
-                calendarId=vaCalId,
-                timeMin=now,
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        events = events_result.get("items", [])
-
-        events_result = (
+        for cal in calendarConfigs:
+            events_result = (
                 service.events()
                 .list(
-                    calendarId=mdCalId,
+                    calendarId=cal.calendarId,
                     timeMin=now,
                     singleEvents=True,
                     orderBy="startTime",
                 )
                 .execute()
             )
-        events = events + events_result.get("items", [])
-        
-        events_result = (
-            service.events()
-            .list(
-                calendarId=dcCalId,
-                timeMin=now,
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        events = events + events_result.get("items", [])
-        
-        events_result = (
-            service.events()
-            .list(
-                calendarId=friendlyVaCalId,
-                timeMin=now,
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        events = events + events_result.get("items", [])
-        
-        events_result = (
-            service.events()
-            .list(
-                calendarId=friendlyDcCalId,
-                timeMin=now,
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        events = events + events_result.get("items", [])
-        
-        events_result = (
-            service.events()
-            .list(
-                calendarId=friendlyMdCalId,
-                timeMin=now,
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        events = events + events_result.get("items", [])
-        
+            events = events_result.get("items", [])
+
+            events_result = (
+                    service.events()
+                    .list(
+                        calendarId=cal.friendlyCalId,
+                        timeMin=now,
+                        singleEvents=True,
+                        orderBy="startTime",
+                    )
+                    .execute()
+                )
+            events = events + events_result.get("items", [])
+                
         if not events:
             return []
 
@@ -313,7 +247,7 @@ async def checkAndUpdateEvents(playListings: list[LocatorEvent], existingCalEven
  
 async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEvents: list[GoogleCalendarEvent]):
     creds = getSACreds() 
-        
+    
     try:
         service = build("calendar", "v3", credentials=creds)
         existingCalendarGuids = []
@@ -338,17 +272,18 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
         print(error)      
 
 async def makeGraphic():
-    with open("graphicConfig.json") as cfg:
-        config = GraphicConfig.from_dict(json.load(cfg))
+    with open("configs/graphicConfig.json") as cfg:
+        graphicConfig = GraphicConfig.from_dict(json.load(cfg))
     
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
         return
-    existingEvents = [x for x in existingEvents if x.organizer.email in [vaCalId, mdCalId, dcCalId]]
+    
+    premierCalIds = [x.calendarId for x in calendarConfigs]
+    existingEvents = [x for x in existingEvents if x.organizer.email in premierCalIds]
     existingEvents = sorted(existingEvents, key=lambda event: datetime.strptime(event.start.dateTime, '%Y-%m-%dT%H:%M:%S%z'))
     
-    d = draw.Drawing(config.embedW, config.embedH, origin='top-left', font_family=config.fontFamily)
-    # d.append(draw.Rectangle(0, 0, embedW, embedH, fill=imageBackground))
+    d = draw.Drawing(graphicConfig.embedW, graphicConfig.embedH, origin='top-left', font_family=graphicConfig.fontFamily)
     
     #header branding
     css_rules = f"""
@@ -360,17 +295,17 @@ async def makeGraphic():
     """
     d.append_css(css_rules)
     
-    gradient = draw.LinearGradient(1, config.embedW/6, config.embedW/2, config.embedW/3)
-    gradient.add_stop(0, config.headerGradientStartColor, 1)
-    gradient.add_stop(1, config.headerGradientEndColor, 1)
-    d.append(draw.Rectangle(config.margin, 0, config.embedW - (2*config.margin), config.headerHeight, fill='white', rx=config.cornerRadius, ry=config.cornerRadius))
-    d.append(draw.Rectangle(config.margin, 0, config.embedW - (2*config.margin), config.headerHeight, fill=gradient, rx=config.cornerRadius, ry=config.cornerRadius))
+    gradient = draw.LinearGradient(1, graphicConfig.embedW/6, graphicConfig.embedW/2, graphicConfig.embedW/3)
+    gradient.add_stop(0, graphicConfig.headerGradientStartColor, 1)
+    gradient.add_stop(1, graphicConfig.headerGradientEndColor, 1)
+    d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill='white', rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
+    d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill=gradient, rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
     
-    d.append(draw.Image( x=config.margin + 20, y=config.margin, width=config.logoSize, height=config.logoSize,  path=config.logoPath, embed=True) )
-    d.append(draw.Text(config.graphicTitle, 54, 640, 50, fill=config.headerTextColor, center=True, class_='title-text', font_family=config.headerFont)) 
+    d.append(draw.Image( x=graphicConfig.margin + 20, y=graphicConfig.margin, width=graphicConfig.logoSize, height=graphicConfig.logoSize,  path=graphicConfig.logoPath, embed=True) )
+    d.append(draw.Text(graphicConfig.graphicTitle, 54, 640, 50, fill=graphicConfig.headerTextColor, center=True, class_='title-text', font_family=graphicConfig.headerFont)) 
     
     rowIndex = 0
-    for i in range(config.headerHeight, config.embedH - config.rowHeight, config.rowHeight):
+    for i in range(graphicConfig.headerHeight, graphicConfig.embedH - graphicConfig.rowHeight, graphicConfig.rowHeight):
         if rowIndex > len(existingEvents)-1: 
             continue
         e = existingEvents[rowIndex]
@@ -378,34 +313,31 @@ async def makeGraphic():
         
         #draw dividers if dif date from last and write date
         currentStart = datetime.strptime(e.start.dateTime, '%Y-%m-%dT%H:%M:%S%z')
-        d.append(draw.Rectangle(5, i, config.embedW-10, config.rowHeight, fill=config.rowBackground,  rx=config.cornerRadius, ry=config.cornerRadius))
+        d.append(draw.Rectangle(5, i, graphicConfig.embedW-10, graphicConfig.rowHeight, fill=graphicConfig.rowBackground,  rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
             
         if(rowIndex != 0):
             previousStartDate = datetime.strptime(existingEvents[rowIndex-1].start.dateTime, '%Y-%m-%dT%H:%M:%S%z').date()
             if(currentStart.date() != previousStartDate):
-                d.append(draw.Line(config.margin, i, config.embedW-config.margin, i, stroke=config.imageBackground, stroke_width=2))          
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= config.textPrimaryColor))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= config.textPrimaryColor))
+                d.append(draw.Line(graphicConfig.margin, i, graphicConfig.embedW-graphicConfig.margin, i, stroke=graphicConfig.imageBackground, stroke_width=2))          
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= graphicConfig.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= graphicConfig.textPrimaryColor))
             else:
-                d.append(draw.Rectangle(config.margin, i-10, config.embedW-10, config.rowHeight, fill=config.rowBackground))
+                d.append(draw.Rectangle(graphicConfig.margin, i-10, graphicConfig.embedW-10, graphicConfig.rowHeight, fill=graphicConfig.rowBackground))
         else:
             # line 1
             if(currentStart.date() == datetime.now().date()):
-                d.append(draw.Circle(26, i + 20, 16, fill=config.highlightColor))
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=config.imageBackground))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill=config.highlightColor))
+                d.append(draw.Circle(26, i + 20, 16, fill=graphicConfig.highlightColor))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=graphicConfig.imageBackground))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill=graphicConfig.highlightColor))
             else:
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= config.textPrimaryColor))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= config.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= graphicConfig.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= graphicConfig.textPrimaryColor))
         
         
-        color = config.textPrimaryColor
-        if e.organizer.email == vaCalId:
-            color = 'green'
-        elif e.organizer.email == dcCalId:
-            color = 'purple'
-        elif e.organizer.email == mdCalId:
-            color = 'red'
+        color = graphicConfig.textPrimaryColor
+        calConfig = [x for x in calendarConfigs if e.organizer.email == x.calendarId]
+        if calConfig and len(calConfig) > 0:
+            color = calConfig[0].color
                 
         rowGroup = draw.Group()
         
@@ -414,7 +346,7 @@ async def makeGraphic():
         bullet = draw.Circle(0, -4 , 6, fill=color)
         schedGroup.append(bullet) # Draw a circle
         startTime = currentStart.strftime("%I:%M%p")
-        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill= config.textPrimaryColor))
+        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill= graphicConfig.textPrimaryColor))
             
     # event data
         eventGroup = draw.Group()
@@ -422,29 +354,27 @@ async def makeGraphic():
         emojiStart = 20
         emojiWidth = 20
         
-        icon = config.unknownIconPath
+        icon = graphicConfig.unknownIconPath
         if e.summary.startswith('🥊'):
-            icon = config.chalIconPath                    
+            icon = graphicConfig.chalIconPath                    
         elif e.summary.startswith('🏆'):
-            icon = config.cupIconPath
+            icon = graphicConfig.cupIconPath
         eventGroup.append(draw.Image( x=emojiStart, y= -20, width=emojiWidth, height=30,  path=icon, embed=True) )               
         
         titleStart = emojiStart + emojiWidth + 5
         title = e.summary[1:]
         titleWidth = 8 * len(title)
-        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= config.textPrimaryColor))
-        eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=config.locationTextColor))
+        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= graphicConfig.textPrimaryColor))
+        eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=graphicConfig.locationTextColor))
         
         rowGroup.append(draw.Use(schedGroup, 0, 0))
         rowGroup.append(draw.Use(eventGroup, 120, 0))
         
-        d.append(draw.Use(rowGroup, config.rowScheduleStart, rowBaseline))
+        d.append(draw.Use(rowGroup, graphicConfig.rowScheduleStart, rowBaseline))
         rowIndex += 1
 
-    d.set_pixel_scale(2)  # Set number of pixels per geometry unit
-    #d.set_render_size(400, 200)  # Alternative to set_pixel_scale
+    d.set_pixel_scale(2)  
     d.save_svg('output/schedule.svg')
-    # cairosvg.svg2png(url="schedule.svg", write_to="schedule.png")
     d.save_png('output/schedule.png')
                      
 @bot.event
@@ -463,7 +393,7 @@ async def runUpdate():
     data = await getVGEvents()
     existingEvents = await getExistingCalItems()
     
-    await pushToCal(data, existingEvents)
+    # await pushToCal(data, existingEvents)
     await checkAndUpdateEvents(data, existingEvents)
     await checkAndDeleteEvents(data, existingEvents)
     

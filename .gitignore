@@ -1,7 +1,7 @@
 .env
 output/*
 *.json
-!graphicConfig.json
+!configs/*
 scriptingTest.py
 
 modules/__pycache__/
