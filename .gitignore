@@ -3,5 +3,5 @@ output/*
 *.json
 !configs/*
 scriptingTest.py
-
+configs/messageConfigs.json
 modules/__pycache__/

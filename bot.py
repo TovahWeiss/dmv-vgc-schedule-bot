@@ -111,7 +111,6 @@ async def getVGEvents()-> list[LocatorEvent]:
          
         for obj in data:
                     del obj["dupeKey"]
-        print(f"Retrieved {len(data)} events from pokedata")     
         return [LocatorEvent.from_dict(item) for item in data]  
 
     except requests.exceptions.RequestException as e:
