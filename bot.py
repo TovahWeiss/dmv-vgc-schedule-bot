@@ -116,6 +116,7 @@ async def getExistingCalItems() -> list[GoogleCalendarEvent]:
     try:
         service = build("calendar", "v3", credentials=creds)
         for cal in calendarConfigs:
+            print(cal.state + ' - ' + cal.calendarId + ' - ' + cal.friendlyCalId)
             events_result = (
                 service.events()
                 .list(
