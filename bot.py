@@ -56,13 +56,18 @@ def getSACreds():
 async def getVGEvents()-> list[LocatorEvent]:
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
 
+    states = "["
+    for x in calendarConfigs:
+        states += f"\"{x.state}\","
+    states = states.rstrip(",") + "]"
+
     payload = {
         "past": False,
         "country": "US",
         "city": "",
         "shop": "",
         "league": "",
-        "states": "[\"District of Columbia\",\"Maryland\",\"Virginia\"]",
+        "states": states,
         "postcode": "",
         "cups": False,
         "challenges": False,
@@ -106,7 +111,7 @@ async def getVGEvents()-> list[LocatorEvent]:
          
         for obj in data:
                     del obj["dupeKey"]
-                          
+        print(f"Retrieved {len(data)} events from pokedata")     
         return [LocatorEvent.from_dict(item) for item in data]  
 
     except requests.exceptions.RequestException as e:
