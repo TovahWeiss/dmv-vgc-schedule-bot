@@ -5,3 +5,4 @@ output/*
 scriptingTest.py
 configs/messageConfigs.json
 modules/__pycache__/
+graphicstest.py
