@@ -28,5 +28,11 @@
         "calendarId": "6c330117d3f4ab7a2f14f74348f02ee5ac0760b15fd33b24869abdabe14d7b33@group.calendar.google.com",
         "friendlyCalId": "5d4dab59ecd762bddc8cb0f939c97b0f1c3d8c6c652a82e9cb89e24be4b4275d@group.calendar.google.com",
         "color": "#f6c921"
+    },
+    {
+        "state": "Utah",
+        "calendarId": "11b2d95a6d3f87a58eb5b3f3fa75404b0246bc43e6231b39094903789973ce46@group.calendar.google.com",
+        "friendlyCalId": "0fd2630c63db9f7fca321387872fb483a76ed36e4c180055b76256f9fb0e8b59@group.calendar.google.com",
+        "color": "#5c340f"
     }
 ]

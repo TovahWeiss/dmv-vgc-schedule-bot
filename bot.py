@@ -155,6 +155,8 @@ async def getVGEvents()-> list[LocatorEvent]:
  
     for obj in data:
         del obj["dupeKey"]
+    
+    print(f"Fetched {len(data)} individual events from pokedata.ovh")
     return [LocatorEvent.from_dict(item) for item in data]    
    
 async def getExistingCalItems() -> list[GoogleCalendarEvent]:
@@ -508,6 +510,9 @@ async def runUpdate():
         curChannel = msg['channelId']
         curMessage = msg['messageId']
         states = msg["stateSelections"]
+        if(states is None or len(states) == 0):
+            states = defaultStates
+            addOrUpdateConfigFile(curChannel, curMessage, states)
         try: 
             embed = await buildEmbedForChannel(curChannel, curMessage, states)
             channel = await bot.fetch_channel(curChannel)
@@ -657,7 +662,6 @@ async def removestate(ctx: discord.ApplicationContext):
     await ctx.response.send_message("Select a state to remove:", view=inputView, ephemeral=True, delete_after=15)   
     timedOut = await inputView.wait()
     if timedOut:
-       await ctx.respond("The request timed out.", ephemeral=True, delete_after=15)
        return
     
     matches[0]["stateSelections"].remove(inputView.value)
