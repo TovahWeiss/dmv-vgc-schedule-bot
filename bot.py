@@ -4,6 +4,8 @@ import subprocess
 import time
 import uuid
 import zoneinfo
+from certifi.__main__ import args
+from certifi.__main__ import args
 import discord
 import os # default module
 from dotenv import load_dotenv
@@ -21,6 +23,7 @@ from modules.CalendarViewsConfig import CalendarViewsConfig
 from modules.GraphicConfig import GraphicConfig
 from modules.GoogleCalendarEvent import GoogleCalendarEvent
 from modules.LocatorEvent import LocatorEvent
+from modules.DynamicView import DynamicView
 
 load_dotenv() # load all the variables from the env file
 bot = discord.Bot()
@@ -30,6 +33,8 @@ SERVICE_ACCOUNT_FILE = "svcAcct.json"
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+
+defaultStates = ["Maryland", "Virginia", "District of Columbia"]
 
 messageListFile = 'configs/messageConfigs.json'
 
@@ -44,7 +49,11 @@ with open("configs/calendarViewsConfig.json") as cfg:
 with open("configs/graphicConfig.json") as cfg:
     graphicConfig = GraphicConfig.from_dict(json.load(cfg))
     print(f"Loaded graphic config from file")
-    
+
+with open("configs/states.json") as states:
+    stateOptions:list[str] = json.load(states)
+    print(f"Loaded {len(stateOptions)} state options from file")
+
 def getEventCalId(e: LocatorEvent) -> str:
     cal = [x for x in calendarConfigs if e.state == x.state]
     if cal and len(cal) > 0:
@@ -52,6 +61,29 @@ def getEventCalId(e: LocatorEvent) -> str:
 
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+
+def addOrUpdateConfigFile(channelId: int, messageId: int, states: list[str] =None):
+    channels = []
+    if(states is None or len(states) == 0):
+        states = defaultStates
+    with open(messageListFile, 'r+') as file:
+        channels = json.load(file)
+        matches = [x for x in channels if x['channelId'] == channelId]
+        if not matches or len(matches) == 0:
+            channels.append({"channelId":channelId, "messageId":messageId, "stateSelections": defaultStates})
+        
+    for c in channels:
+        if c['channelId'] == channelId:
+            c['stateSelections'] = states
+            
+    # create randomly named temporary file to avoid 
+    # interference with other thread/asynchronous request
+    tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
+    with open(tempfile, 'w') as f:
+        json.dump(channels, f, indent=4)
+
+    # rename temporary file replacing old file
+    os.replace(tempfile, messageListFile)
 
 async def getVGEvents()-> list[LocatorEvent]:
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
@@ -124,8 +156,8 @@ async def getVGEvents()-> list[LocatorEvent]:
     data = [obj for obj in data if obj["dupeKey"]  not in seen and not seen.add(obj["dupeKey"])]
         
     for obj in data:
-                del obj["dupeKey"]
-    return [LocatorEvent.from_dict(item) for item in data]
+        del obj["dupeKey"]
+    return [LocatorEvent.from_dict(item) for item in data]    
    
 async def getExistingCalItems() -> list[GoogleCalendarEvent]:
     now = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
@@ -398,7 +430,7 @@ async def on_ready():
         with open(messageListFile, "w") as file:
             file.write("[]")
     os.makedirs('output', exist_ok=True)
-    runUpdate.start()
+    # runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -515,22 +547,7 @@ async def sync(ctx: discord.ApplicationContext):
     channelId = ctx.channel_id
     messageId = message.id
 
-    channels = []
-   
-    with open(messageListFile, 'r+') as file:
-        channels = json.load(file)
-        matches = [x for x in channels if x['channelId'] == channelId]
-        if not matches or len(matches) == 0:
-            channels.append({"channelId":channelId, "messageId":messageId})
-            
-    # create randomly named temporary file to avoid 
-    # interference with other thread/asynchronous request
-    tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
-    with open(tempfile, 'w') as f:
-        json.dump(channels, f, indent=4)
-
-    # rename temporary file replacing old file
-    os.replace(tempfile, messageListFile)
+    addOrUpdateConfigFile(channelId, messageId)
     
     runUpdate.start()
 
@@ -565,5 +582,83 @@ async def updatelog(ctx: discord.ApplicationContext):
         message = "Git is not installed or not in your system PATH."
     
     await ctx.respond(message, ephemeral=True)
-        
+
+
+@bot.slash_command(name="addstate", description="Add a state to your channel's calendar")
+@discord.option(
+    "state_al_ky",
+    description="Alabama-Kentucky",
+    choices=stateOptions[:18],
+    required=False
+)
+@discord.option(
+    "state_lo_oh",
+    description="Louisiana-Ohio",
+    choices=stateOptions[18:36],
+    required=False
+)
+@discord.option(
+    "state_ok_wy",
+    description="Oklahoma-Wyoming",
+    choices=stateOptions[36:],
+    required=False
+)
+async def addstate(ctx: discord.ApplicationContext, state_al_ky: str = None, state_lo_oh: str = None, state_ok_wy: str = None ):
+    states = []
+    channelId = ctx.channel_id
+    with open(messageListFile, 'r+') as file:
+        serverConfig = json.load(file)
+        matches = [x for x in serverConfig if x['channelId'] == channelId]
+        if not matches or len(matches) == 0:
+            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True)
+            return
+    
+    if not matches[0]['stateSelections'] is None:
+        states = matches[0]['stateSelections']    
+    
+    if state_al_ky:
+        state = state_al_ky
+    if state_lo_oh:
+        state = state_lo_oh
+    if state_ok_wy:
+        state = state_ok_wy
+
+    if(state and state not in states):
+        states.append(state)
+    states = sorted(states)
+    
+    addOrUpdateConfigFile(channelId, matches[0]['messageId'], states)
+    
+    await ctx.respond(f"States for this channel: {', '.join(states)}", ephemeral=True)
+    
+@bot.slash_command(name="removestate", description="Remove a state from your channel's calendar")
+async def removestate(ctx: discord.ApplicationContext):
+    states = []
+    channelId = ctx.channel_id
+    with open(messageListFile, 'r+') as file:
+        serverConfig = json.load(file)
+        matches = [x for x in serverConfig if x['channelId'] == channelId]
+        if not matches or len(matches) == 0:
+            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True)
+            return
+    
+    row = 0
+    if not matches[0]['stateSelections'] is None:
+        for index, state in enumerate(matches[0]['stateSelections']):
+            if(index % 5 == 0):
+                row += 1
+                
+            states.append({'id':state, 'row': row})
+    inputView = DynamicView(states)
+    
+    await ctx.response.send_message("Select a state to remove:", view=inputView, ephemeral=True, delete_after=15)   
+    timedOut = await inputView.wait()
+    if timedOut:
+       await ctx.respond("The request timed out.", ephemeral=True, delete_after=15)
+       return
+    
+    matches[0]["stateSelections"].remove(inputView.value)
+    print(matches[0]["stateSelections"])
+    addOrUpdateConfigFile(channelId, matches[0]['messageId'], matches[0]["stateSelections"])
+
 bot.run(os.getenv('TOKEN')) # run the bot with the token
