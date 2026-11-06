@@ -34,5 +34,11 @@
         "calendarId": "11b2d95a6d3f87a58eb5b3f3fa75404b0246bc43e6231b39094903789973ce46@group.calendar.google.com",
         "friendlyCalId": "0fd2630c63db9f7fca321387872fb483a76ed36e4c180055b76256f9fb0e8b59@group.calendar.google.com",
         "color": "#5c340f"
+    },
+    {
+        "state": "Wyoming",
+        "calendarId": "b1581d4788dffb34d04034fb928490123c63797ddb54db4f6e39a0a97486d6af@group.calendar.google.com",
+        "friendlyCalId": "04dd09ac8de372d49e0e39a8ea5ac02569ef6433c38e72abbe9087f2db57e831@group.calendar.google.com",
+        "color": "#49d6ce"
     }
 ]
