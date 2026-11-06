@@ -60,61 +60,72 @@ async def getVGEvents()-> list[LocatorEvent]:
     for x in calendarConfigs:
         states += f"\"{x.state}\","
     states = states.rstrip(",") + "]"
+    
+    page = 0
+    data = []
+    while True:
+        try:
+            payload = {
+                "past": False,
+                "country": "US",
+                "city": "",
+                "shop": "",
+                "league": "",
+                "states": states,
+                "postcode": "",
+                "cups": False,
+                "challenges": False,
+                "vcups": True,
+                "vchallenges": True,
+                "prereleases": False,
+                "premier": False,
+                "go": False,
+                "gocup": False,
+                "mss": False,
+                "ftcg": False,
+                "fvg": True,
+                "fgo": False,
+                "latitude": "",
+                "longitude": "",
+                "radius": "",
+                "unit": "km",
+                "width": 2133,
+                "page": page,
+            }
 
-    payload = {
-        "past": False,
-        "country": "US",
-        "city": "",
-        "shop": "",
-        "league": "",
-        "states": states,
-        "postcode": "",
-        "cups": False,
-        "challenges": False,
-        "vcups": True,
-        "vchallenges": True,
-        "prereleases": False,
-        "premier": False,
-        "go": False,
-        "gocup": False,
-        "mss": False,
-        "ftcg": False,
-        "fvg": True,
-        "fgo": False,
-        "latitude": "",
-        "longitude": "",
-        "radius": "",
-        "unit": "km",
-        "width": 2133,
-        "page": 0,
-    }
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json; charset=UTF-8",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+                "origin": "https://www.pokedata.ovh",
+                "referer": "https://www.pokedata.ovh/events/"
+            }
 
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json; charset=UTF-8",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
-        "origin": "https://www.pokedata.ovh",
-        "referer": "https://www.pokedata.ovh/events/"
-    }
+    
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
 
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-
-        data = response.json()
-        # pokedata sucks at deleting old info, best option i could think of
-        data = sorted(data, key=lambda event: ( datetime.strptime(event['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(LocatorEvent.from_dict(event).getEventTz())), event['guid']))
-        for d in data:
-            d["dupeKey"] = d["shop"] + '~|~' + d["type"] + '~|~' + d["street_address"] + '~|~' +d["when"]  + '~|~' + d["name"]
-        seen = set()
-        data = [obj for obj in data if obj["dupeKey"]  not in seen and not seen.add(obj["dupeKey"])]
-         
-        for obj in data:
-                    del obj["dupeKey"]
-        return [LocatorEvent.from_dict(item) for item in data]  
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error: {e}")
+            pageData = response.json()
+            if(pageData is None or len(pageData) == 0):
+                break
+            else:
+                data = data + pageData
+                page += 1
+        
+        except requests.exceptions.RequestException as e:
+            print(f"Error: {e}")
+            break
+                
+    # pokedata sucks at deleting old info, best option i could think of
+    data = sorted(data, key=lambda event: ( datetime.strptime(event['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(LocatorEvent.from_dict(event).getEventTz())), event['guid']))
+    for d in data:
+        d["dupeKey"] = d["shop"] + '~|~' + d["type"] + '~|~' + d["street_address"] + '~|~' +d["when"]  + '~|~' + d["name"]
+    seen = set()
+    data = [obj for obj in data if obj["dupeKey"]  not in seen and not seen.add(obj["dupeKey"])]
+        
+    for obj in data:
+                del obj["dupeKey"]
+    return [LocatorEvent.from_dict(item) for item in data]
    
 async def getExistingCalItems() -> list[GoogleCalendarEvent]:
     now = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
