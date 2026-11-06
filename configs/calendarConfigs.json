@@ -40,5 +40,17 @@
         "calendarId": "b1581d4788dffb34d04034fb928490123c63797ddb54db4f6e39a0a97486d6af@group.calendar.google.com",
         "friendlyCalId": "04dd09ac8de372d49e0e39a8ea5ac02569ef6433c38e72abbe9087f2db57e831@group.calendar.google.com",
         "color": "#49d6ce"
+    },
+    {
+        "state": "Ohio",
+        "calendarId": "39c495add078c2a244d29508867baf8843e51d172fd0f26e99f2d1b33a30d04a@group.calendar.google.com",
+        "friendlyCalId": "b9528812e448aa179dbcd5130f3fddc80f14bd93dabb22833c8f03e605d346ae@group.calendar.google.com",
+        "color": "#141613"
+    },
+    {
+        "state": "Pennsylvania",
+        "calendarId": "b9709039dbef42cfc3d44f0113fe87410ceddf757b30afdfa06a73515732253d@group.calendar.google.com",
+        "friendlyCalId": "42b8a53a05ce2b8c3137cae6d959b1732964f5b84364a176000e021f4f778f88@group.calendar.google.com",
+        "color": "#b950d0"
     }
 ]
