@@ -430,7 +430,7 @@ async def on_ready():
         with open(messageListFile, "w") as file:
             file.write("[]")
     os.makedirs('output', exist_ok=True)
-    # runUpdate.start()
+    runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
