@@ -1,20 +1,32 @@
 [
     {
         "state": "Virginia",
-        "calendarId":"b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com",
+        "calendarId": "b395ee4ddd6474d60a69c911d76c04badf64451e26a1dfb1012f56482dff5381@group.calendar.google.com",
         "friendlyCalId": "ad51dc180f1337ccc228f8f61973408d9cc7e74871cb61e8fc0ea27203e4e210@group.calendar.google.com",
         "color": "green"
     },
     {
         "state": "District of Columbia",
-        "calendarId":"343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com",
+        "calendarId": "343b752ae8b2942dbe9a2f2aa32a0470d50ecfc4409dffd183851d7f4d35b25b@group.calendar.google.com",
         "friendlyCalId": "eb5d9c46e85780cbe9b0df36585ab52fc932a59e1c5e49760135e7f26606da4a@group.calendar.google.com",
-        "color":"red"
+        "color": "red"
     },
     {
         "state": "Maryland",
-        "calendarId":"927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com",
+        "calendarId": "927124fb7109ce4ade4c098277951cddc85b1b3ec96f3af53d42272d0f3b0dfc@group.calendar.google.com",
         "friendlyCalId": "873fa813d71d99c7351e407086eb0e9d7208c70533dc8ca11e3564852e053448@group.calendar.google.com",
-        "color":"purple"
+        "color": "purple"
+    },
+    {
+        "state": "Alabama",
+        "calendarId": "28d7085cc34c659b6c0e9d804d0c4ed5814717511d18f2806ed7e326f4a53311@group.calendar.google.com",
+        "friendlyCalId": "d6fe41615141a678c62ded3bc1446d9ef0582b8c868d6595ca02f295c1f23783@group.calendar.google.com",
+        "color": "#dc0b4c"
+    },
+    {
+        "state": "California",
+        "calendarId": "6c330117d3f4ab7a2f14f74348f02ee5ac0760b15fd33b24869abdabe14d7b33@group.calendar.google.com",
+        "friendlyCalId": "5d4dab59ecd762bddc8cb0f939c97b0f1c3d8c6c652a82e9cb89e24be4b4275d@group.calendar.google.com",
+        "color": "#f6c921"
     }
 ]

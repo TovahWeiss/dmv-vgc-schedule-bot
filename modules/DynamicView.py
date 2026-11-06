@@ -16,7 +16,7 @@ class DynamicView(ui.View):
         
         async def cb(interaction: discord.Interaction, btn=button):
             self.value = btn.label
-            await interaction.respond(f"Removed {btn.label}", delete_after=15)
+            await interaction.respond(f"Removed {btn.label}", ephemeral=True, delete_after=15)
             self.stop()
             
         button.callback = cb

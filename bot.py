@@ -4,8 +4,6 @@ import subprocess
 import time
 import uuid
 import zoneinfo
-from certifi.__main__ import args
-from certifi.__main__ import args
 import discord
 import os # default module
 from dotenv import load_dotenv
@@ -154,7 +152,7 @@ async def getVGEvents()-> list[LocatorEvent]:
         d["dupeKey"] = d["shop"] + '~|~' + d["type"] + '~|~' + d["street_address"] + '~|~' +d["when"]  + '~|~' + d["name"]
     seen = set()
     data = [obj for obj in data if obj["dupeKey"]  not in seen and not seen.add(obj["dupeKey"])]
-        
+ 
     for obj in data:
         del obj["dupeKey"]
     return [LocatorEvent.from_dict(item) for item in data]    
@@ -320,12 +318,13 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
     except HttpError as error:
         print(error)      
 
-async def makeGraphic():    
+async def makeGraphicForChannel(states:list[str]):    
     existingEvents = await getExistingCalItems()
     if(existingEvents is None or len(existingEvents) == 0):
         return
     
-    premierCalIds = [x.calendarId for x in calendarConfigs]
+    calConfigForChannel = [x for x in calendarConfigs if x.state in states]
+    premierCalIds = [x.calendarId for x in calConfigForChannel]
     existingEvents = [x for x in existingEvents if x.organizer.email in premierCalIds]
     existingEvents = sorted(existingEvents, key=lambda event: datetime.strptime(event.start.dateTime, '%Y-%m-%dT%H:%M:%S%z'))
     
@@ -422,34 +421,17 @@ async def makeGraphic():
     d.set_pixel_scale(2)  
     d.save_svg('output/schedule.svg')
     d.save_png('output/schedule.png')
-                     
-@bot.event
-async def on_ready():
-    print(f"{bot.user} is ready and online!")
-    if not Path(messageListFile).is_file():
-        with open(messageListFile, "w") as file:
-            file.write("[]")
-    os.makedirs('output', exist_ok=True)
-    runUpdate.start()
-    print(f"{bot.user} has initialized!")
-
-@tasks.loop(hours=1)
-async def runUpdate():
-    print(f"running update at {(datetime.now()).astimezone().isoformat()}")
-    data = await getVGEvents()
-    existingEvents = await getExistingCalItems()
+ 
+async def buildEmbedForChannel(channelId: int, messageId: int, states:list[str]) -> discord.embed:
+    if(messageId is None or messageId is None or states is None or len(states) == 0):
+        return
     
-    await pushToCal(data, existingEvents)
-    await checkAndUpdateEvents(data, existingEvents)
-    await checkAndDeleteEvents(data, existingEvents)
-    
-    await makeGraphic()
-    
+    await makeGraphicForChannel(states)
+         
     embed = discord.Embed(
         title="DMV VGC Schedule",
         color=discord.Color.yellow()
     )
-    
     
     embed.add_field(
         name="Premier Events", 
@@ -491,10 +473,30 @@ async def runUpdate():
     
     # Display images or graphical assets
     embed.set_image(url="attachment://output/schedule.png")
+    return embed
+                    
+@bot.event
+async def on_ready():
+    print(f"{bot.user} is ready and online!")
+    if not Path(messageListFile).is_file():
+        with open(messageListFile, "w") as file:
+            file.write("[]")
+    os.makedirs('output', exist_ok=True)
+    runUpdate.start()
+    print(f"{bot.user} has initialized!")
+
+@tasks.loop(hours=1)
+async def runUpdate():
+    print(f"running update at {(datetime.now()).astimezone().isoformat()}")
+    data = await getVGEvents()
+    existingEvents = await getExistingCalItems()
+    
+    await pushToCal(data, existingEvents)
+    await checkAndUpdateEvents(data, existingEvents)
+    await checkAndDeleteEvents(data, existingEvents)
     
     curChannel = None
     curMessage = None
-    
     
     channels = []
     with open(messageListFile, 'r+', encoding='utf-8') as file:
@@ -505,7 +507,9 @@ async def runUpdate():
     for msg in channels:
         curChannel = msg['channelId']
         curMessage = msg['messageId']
+        states = msg["stateSelections"]
         try: 
+            embed = await buildEmbedForChannel(curChannel, curMessage, states)
             channel = await bot.fetch_channel(curChannel)
             msg = await channel.fetch_message(curMessage)
             await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
@@ -525,7 +529,7 @@ async def runUpdate():
 @bot.slash_command(name="sync", description="get dmv vgc schedule data")
 async def sync(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
-        await ctx.respond("I don't make deals with peasants!", ephemeral=True)
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     
     runUpdate.cancel()
@@ -541,7 +545,7 @@ async def sync(ctx: discord.ApplicationContext):
     )
        
     embed.url = calendarViewsConfig.allCalView
-    await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True)
+    await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True, delete_after=15)
     message = await ctx.send(embed=embed) 
     
     channelId = ctx.channel_id
@@ -554,17 +558,17 @@ async def sync(ctx: discord.ApplicationContext):
 @bot.slash_command(name="manualsync", description="force all instances to update")
 async def manualsync(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
-        await ctx.respond("I don't make deals with peasants!", ephemeral=True)
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     
     runUpdate.cancel()
-    await ctx.respond(content="forcing schedule update!", ephemeral=True)
+    await ctx.respond(content="forcing schedule update!", ephemeral=True, delete_after=15)
     runUpdate.start()
 
 @bot.slash_command(name="updatelog", description="prints bot update log")
 async def updatelog(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
-        await ctx.respond("I don't make deals with peasants!", ephemeral=True)
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     message = ""
     try:
@@ -581,8 +585,7 @@ async def updatelog(ctx: discord.ApplicationContext):
     except FileNotFoundError:
         message = "Git is not installed or not in your system PATH."
     
-    await ctx.respond(message, ephemeral=True)
-
+    await ctx.respond(message, ephemeral=True, delete_after=60)
 
 @bot.slash_command(name="addstate", description="Add a state to your channel's calendar")
 @discord.option(
@@ -610,7 +613,7 @@ async def addstate(ctx: discord.ApplicationContext, state_al_ky: str = None, sta
         serverConfig = json.load(file)
         matches = [x for x in serverConfig if x['channelId'] == channelId]
         if not matches or len(matches) == 0:
-            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True)
+            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True, timeOut=15)
             return
     
     if not matches[0]['stateSelections'] is None:
@@ -639,7 +642,7 @@ async def removestate(ctx: discord.ApplicationContext):
         serverConfig = json.load(file)
         matches = [x for x in serverConfig if x['channelId'] == channelId]
         if not matches or len(matches) == 0:
-            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True)
+            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True, delete_after=15)
             return
     
     row = 0
@@ -658,7 +661,6 @@ async def removestate(ctx: discord.ApplicationContext):
        return
     
     matches[0]["stateSelections"].remove(inputView.value)
-    print(matches[0]["stateSelections"])
     addOrUpdateConfigFile(channelId, matches[0]['messageId'], matches[0]["stateSelections"])
 
 bot.run(os.getenv('TOKEN')) # run the bot with the token
