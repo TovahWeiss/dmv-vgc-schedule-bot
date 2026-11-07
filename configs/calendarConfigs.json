@@ -52,5 +52,41 @@
         "calendarId": "b9709039dbef42cfc3d44f0113fe87410ceddf757b30afdfa06a73515732253d@group.calendar.google.com",
         "friendlyCalId": "42b8a53a05ce2b8c3137cae6d959b1732964f5b84364a176000e021f4f778f88@group.calendar.google.com",
         "color": "#b950d0"
+    },
+    {
+        "state": "Texas",
+        "calendarId": "365121053a0a2569aeac02bc6baf3baa9d155008f691868d82173cf80c0379d9@group.calendar.google.com",
+        "friendlyCalId": "b18846a6614028627ce596c5cb7021f74f61892447a623cab4bad51efe428a24@group.calendar.google.com",
+        "color": "#ddbd23"
+    },
+    {
+        "state": "Delaware",
+        "calendarId": "26bd3a4b42baa22fb9994bbe1fb9520301e5a0398aaac148e5c9964586ba8e41@group.calendar.google.com",
+        "friendlyCalId": "2e3fed1432adb712efab7a63579c9fc6ad13345a01cd5c03af59f072c23a6a80@group.calendar.google.com",
+        "color": "#5b3f00"
+    },
+    {
+        "state": "Illinois",
+        "calendarId": "37862f0045da91911c688d801751b34b7218a853fe4815783555255b22d1e7fc@group.calendar.google.com",
+        "friendlyCalId": "dc105f94764ab564effbffa9d55d1627abf09cce9e0f97c2c873c6da60c267ef@group.calendar.google.com",
+        "color": "#69df9d"
+    },
+    {
+        "state": "New York",
+        "calendarId": "0d1a49d6199e1bb33e0a906739b0abc83a4abf6ff8e72a55b6468c537d049214@group.calendar.google.com",
+        "friendlyCalId": "2b4bb839330f2c8ced5f6f3a2409326316f01bf2c2385217c6531b411c86616a@group.calendar.google.com",
+        "color": "#ca595a"
+    },
+    {
+        "state": "Georgia",
+        "calendarId": "08125f9ecfaf7cda076ce08996d61a5473dca54509a1718e5b0835439fbb0f11@group.calendar.google.com",
+        "friendlyCalId": "c50c61181a479470e620dfbc216994d722ea856c0be2ccd4d727667ab9358956@group.calendar.google.com",
+        "color": "#ed80de"
+    },
+    {
+        "state": "Alaska",
+        "calendarId": "06aeadd3cffd00f7dd239ad06297bee9d8c3ebd0892ecfdf6d93fff43c965daf@group.calendar.google.com",
+        "friendlyCalId": "2e180ccc369cab22de6d7d1ff5d9dd256fbb3957e8520144dfce9588905ed072@group.calendar.google.com",
+        "color": "#190fd7"
     }
 ]
