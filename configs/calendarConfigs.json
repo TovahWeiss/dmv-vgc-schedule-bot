@@ -88,5 +88,59 @@
         "calendarId": "06aeadd3cffd00f7dd239ad06297bee9d8c3ebd0892ecfdf6d93fff43c965daf@group.calendar.google.com",
         "friendlyCalId": "2e180ccc369cab22de6d7d1ff5d9dd256fbb3957e8520144dfce9588905ed072@group.calendar.google.com",
         "color": "#190fd7"
+    },
+    {
+        "state": "Arizona",
+        "calendarId": "4fa1b4b91b20080416f25bbc83030d89048bdb6a217ec864293e9ff3b8317d79@group.calendar.google.com",
+        "friendlyCalId": "4164875c266bd5e4f3afe28c7755cc51afa596c1ac20c63bcb383f37017a5a8d@group.calendar.google.com",
+        "color": "#052307"
+    },
+    {
+        "state": "Arkansas",
+        "calendarId": "26747418f732739143ab79204c0beb2c217147859971d0b0660444a32145da1f@group.calendar.google.com",
+        "friendlyCalId": "977499e57cd3a956c703a0439ec107e435d7caab9cafc9f5c9fa0886c14069a0@group.calendar.google.com",
+        "color": "#00c4d5"
+    },
+    {
+        "state": "Colorado",
+        "calendarId": "9c76609e04166d3177187c764bb2e5e92ea3b853851d952544337ed57fc79d23@group.calendar.google.com",
+        "friendlyCalId": "65c9c43c23b07780e25c8953d4d470bab2d1121bc371aefbc62daff5bc0f0138@group.calendar.google.com",
+        "color": "#c4308f"
+    },
+    {
+        "state": "Connecticut",
+        "calendarId": "c696aac96e5cad518c94ad741ad2219f356ad985f42f80c34f49cd50f5c4f656@group.calendar.google.com",
+        "friendlyCalId": "f18483cd92d9d3845fff0d850ba0d7fccc8f14f9de516f5880a29bb1eacb02ab@group.calendar.google.com",
+        "color": "#81bddf"
+    },
+    {
+        "state": "Florida",
+        "calendarId": "47d282e7d3947cad2e7a2ed9ddfd3573609420e7f2cceffaa76f233a1a011e8d@group.calendar.google.com",
+        "friendlyCalId": "9c2cb4d5a3708edd354f9ee92a8548ccee3f8e5d567fb792bfd5ccd1fe4dd4fa@group.calendar.google.com",
+        "color": "#98f9b9"
+    },
+    {
+        "state": "Hawaii",
+        "calendarId": "248d72c75bcc03c99650690ab404633ca1f4e86e0993a2de449a313c415b7a6b@group.calendar.google.com",
+        "friendlyCalId": "929cd3a501f8bcf1aa0b302047bed3c84596b82178d744be9e35846ba468d07e@group.calendar.google.com",
+        "color": "#b3837d"
+    },
+    {
+        "state": "Idaho",
+        "calendarId": "86f5200e87a63947107c771da64ef8061786ab339c5924b0797f1cda017c3f9a@group.calendar.google.com",
+        "friendlyCalId": "cd2cb61fa5719dda1b125ddfeb5bf669ba8093fa76fb58fe82a4f659f11a6983@group.calendar.google.com",
+        "color": "#bd715d"
+    },
+    {
+        "state": "Indiana",
+        "calendarId": "f56b3f0c861c0ac821b7a02370e701dd1d39e15dfe3a423e65b8a93f75e294fb@group.calendar.google.com",
+        "friendlyCalId": "c392cb70e80d8379c3f2ff668852006a7caad1d74a9e2ccc731d267b96f4fc2c@group.calendar.google.com",
+        "color": "#e86cc3"
+    },
+    {
+        "state": "Iowa",
+        "calendarId": "33f91aa6c261c1796782a3c318f0a9c00935f2e7d1b55ff3849f02f1324846be@group.calendar.google.com",
+        "friendlyCalId": "8106550e54aea6c9cb054f7bbb084c6d4d20aad547a9f6ed61de9af890d36dad@group.calendar.google.com",
+        "color": "#f7f972"
     }
 ]

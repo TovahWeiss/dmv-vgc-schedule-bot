@@ -159,13 +159,16 @@ async def getVGEvents()-> list[LocatorEvent]:
     print(f"Fetched {len(data)} individual events from pokedata.ovh")
     return [LocatorEvent.from_dict(item) for item in data]    
    
-async def getExistingCalItems() -> list[GoogleCalendarEvent]:
+async def getExistingCalItems(cals:list[CalendarConfig] = None) -> list[GoogleCalendarEvent]:
     now = (datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)).astimezone().isoformat() #dont delete possibly in progress events from the calendar
     creds = getSACreds() 
     events = []
+    if(cals is None or len(cals) == 0):
+        cals = calendarConfigs
+    
     try:
         service = build("calendar", "v3", credentials=creds)
-        for cal in calendarConfigs:
+        for cal in cals:
             events_result = (
                 service.events()
                 .list(
@@ -320,12 +323,12 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
     except HttpError as error:
         print(error)      
 
-async def makeGraphicForChannel(states:list[str]):    
-    existingEvents = await getExistingCalItems()
+async def makeGraphicForChannel(states:list[str]): 
+    calConfigForChannel = [x for x in calendarConfigs if x.state in states]   
+    existingEvents = await getExistingCalItems(calConfigForChannel)
     if(existingEvents is None or len(existingEvents) == 0):
         return
-    
-    calConfigForChannel = [x for x in calendarConfigs if x.state in states]
+        
     premierCalIds = [x.calendarId for x in calConfigForChannel]
     existingEvents = [x for x in existingEvents if x.organizer.email in premierCalIds]
     existingEvents = sorted(existingEvents, key=lambda event: datetime.strptime(event.start.dateTime, '%Y-%m-%dT%H:%M:%S%z'))
@@ -612,6 +615,10 @@ async def updatelog(ctx: discord.ApplicationContext):
     required=False
 )
 async def addstate(ctx: discord.ApplicationContext, state_al_ky: str = None, state_lo_oh: str = None, state_ok_wy: str = None ):
+    if state_al_ky is None and state_lo_oh is None and state_ok_wy is None:
+        await ctx.respond("Please select a state to add", ephemeral=True, delete_after=15)
+        return
+    
     states = []
     channelId = ctx.channel_id
     with open(messageListFile, 'r+') as file:
@@ -624,11 +631,11 @@ async def addstate(ctx: discord.ApplicationContext, state_al_ky: str = None, sta
     if not matches[0]['stateSelections'] is None:
         states = matches[0]['stateSelections']    
     
-    if state_al_ky:
+    if state_al_ky is not None:
         state = state_al_ky
-    if state_lo_oh:
+    if state_lo_oh is not None:
         state = state_lo_oh
-    if state_ok_wy:
+    if state_ok_wy is not None:
         state = state_ok_wy
 
     if(state and state not in states):
