@@ -6,6 +6,7 @@ import uuid
 import zoneinfo
 import discord
 import os # default module
+from discord import commands
 from dotenv import load_dotenv
 import requests
 import os.path
@@ -429,8 +430,8 @@ async def makeGraphicForChannel(states:list[str]):
     d.save_svg('output/schedule.svg')
     d.save_png('output/schedule.png')
  
-async def buildEmbedForChannel(channelId: int, messageId: int, states:list[str]) -> discord.embed:
-    if(messageId is None or messageId is None or states is None or len(states) == 0):
+async def buildEmbedForChannel(states:list[str]) -> discord.embed:
+    if(states is None or len(states) == 0):
         return
     
     await makeGraphicForChannel(states)
@@ -481,7 +482,18 @@ async def buildEmbedForChannel(channelId: int, messageId: int, states:list[str])
     # Display images or graphical assets
     embed.set_image(url="attachment://output/schedule.png")
     return embed
-                    
+     
+async def clearFutureForState(cals:list[CalendarConfig]):
+    items = await getExistingCalItems(cals)
+    try:
+        service = build("calendar", "v3", credentials=getSACreds())
+        for calEvent in items:
+            now = datetime.now().astimezone().isoformat()
+            service.events().delete(calendarId=calEvent.organizer.email, eventId=calEvent.id).execute()
+            print ('Event deleted: %s at %s' % (calEvent.summary, now))                   
+    except HttpError as error:
+        print(error)      
+                   
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
@@ -519,7 +531,7 @@ async def runUpdate():
             states = defaultStates
             addOrUpdateConfigFile(curChannel, curMessage, states)
         try: 
-            embed = await buildEmbedForChannel(curChannel, curMessage, states)
+            embed = await buildEmbedForChannel(states)
             channel = await bot.fetch_channel(curChannel)
             msg = await channel.fetch_message(curMessage)
             await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
@@ -566,13 +578,32 @@ async def sync(ctx: discord.ApplicationContext):
     runUpdate.start()
 
 @bot.slash_command(name="force", description="force all instances to update")
-async def manualsync(ctx: discord.ApplicationContext):
+async def force(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     
     runUpdate.cancel()
-    await ctx.respond(content="forcing schedule update!", ephemeral=True, delete_after=15)
+    
+    with open("configs/calendarConfigs.json") as cfg:
+        global calendarConfigs
+        calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
+        print(f"Loaded {len(calendarConfigs)} calendar configs from file")
+
+    with open("configs/calendarViewsConfig.json") as cfg:
+        global calendarViewsConfig
+        calendarViewsConfig = CalendarViewsConfig.from_dict(json.load(cfg))
+        print(f"Loaded calendar views config from file")
+        
+    with open("configs/graphicConfig.json") as cfg:
+        global graphicConfig
+        graphicConfig = GraphicConfig.from_dict(json.load(cfg))
+        print(f"Loaded graphic config from file")
+    
+    content = f"Loaded {len(calendarConfigs)} calendar configs from file!\n"
+    content += "Loaded calendar views config from file!\n"
+    content += f"Loaded graphic config from file!\n"
+    await ctx.respond(content= content + "\nforcing schedule update!", ephemeral=True, delete_after=15)
     runUpdate.start()
 
 @bot.slash_command(name="updatelog", description="prints bot update log")
@@ -662,4 +693,25 @@ async def removestate(ctx: discord.ApplicationContext):
     matches[0]["stateSelections"].remove(inputView.value)
     addOrUpdateConfigFile(channelId, matches[0]['messageId'], matches[0]["stateSelections"])
 
+@bot.slash_command(name="clearfuture", description="Clears a states future events to full refresh for next cycle(debug use)")
+@discord.ext.commands.is_owner()
+async def clearfuture(ctx: discord.ApplicationContext, state: str):
+    if state is None:
+        await ctx.respond(f"Please enter a state, make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)
+        return
+    state  = state.strip().lower()
+    foundValue = next((k for k, v in stateOptions.items() if (k.lower() == state) or (v.lower() == state)), None)
+    if foundValue is None:
+        await ctx.respond(f"No state found named '{state}', make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)     
+        return
+    cal = [x for x in calendarConfigs if foundValue == x.state]
+    if len(cal) == 0:
+        await ctx.respond(f"No calendar configured for '{foundValue}'", ephemeral=True, delete_after=15)
+        return
+    await ctx.respond(f"Clearing calendars for {foundValue}", ephemeral=True, delete_after=15)
+    
+    await clearFutureForState(cal)
+    await ctx.respond(f"Cleared calendars for {foundValue}", ephemeral=True, delete_after=15)
+        
+    
 bot.run(os.getenv('TOKEN')) # run the bot with the token

@@ -178,5 +178,17 @@
         "calendarId": "ca6033346f1c87b2b1aa3e8ab25465112701f346c65917c5ce53063afc5419d8@group.calendar.google.com",
         "friendlyCalId": "9c8cef21fa6421559fffc1372dbe7ae952b60e783a2145fafd0f9471841f8af0@group.calendar.google.com",
         "color": "#f760f2"
+    },
+    {
+        "state": "Massachusetts",
+        "calendarId": "cd20478c66e57d3ad13fd4f091756bcbe6c5058791ae887b7787bab45db56251@group.calendar.google.com",
+        "friendlyCalId": "b17c03b17a320d2c2be0b27b39785cd7082d3a020bbab9dff53af32e0b0b94d2@group.calendar.google.com",
+        "color": "#1e9859"
+    },
+    {
+        "state": "Michigan",
+        "calendarId": "865566d7f439e57db3be718f556aefe43139efcc32eca85422044e84e7132fc8@group.calendar.google.com",
+        "friendlyCalId": "47d8ff17a673c7988f66282c726d4721a84e474f9e02bfd4804429e8e9bb2cdb@group.calendar.google.com",
+        "color": "#6d8147"
     }
 ]
