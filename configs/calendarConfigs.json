@@ -142,5 +142,41 @@
         "calendarId": "33f91aa6c261c1796782a3c318f0a9c00935f2e7d1b55ff3849f02f1324846be@group.calendar.google.com",
         "friendlyCalId": "8106550e54aea6c9cb054f7bbb084c6d4d20aad547a9f6ed61de9af890d36dad@group.calendar.google.com",
         "color": "#f7f972"
+    },
+    {
+        "state": "Kansas",
+        "calendarId": "7e152db3820b8abb72bc9ae7416c17af52a96f6373ceff139cf845d6f9d5075c@group.calendar.google.com",
+        "friendlyCalId": "75f68f42c9da51da142587bce2b37d0588a57a00be78e2c2d2b01543b97cccc1@group.calendar.google.com",
+        "color": "#5928ca"
+    },
+    {
+        "state": "New Jersey",
+        "calendarId": "c6fc2f218b64ba79fa1786d85b2281173841318ae7e531d5db11be4e03eed053@group.calendar.google.com",
+        "friendlyCalId": "4fa28cdfbd4f469adce9d57792c15bf899c84f1aa93127c996954e6e5b97a0e1@group.calendar.google.com",
+        "color": "#45ec50"
+    },
+    {
+        "state": "Wisconsin",
+        "calendarId": "ed93d2830ba998224a5351ff560b2b8dd325124c95cd836bf977f0b7bc8ead89@group.calendar.google.com",
+        "friendlyCalId": "945cddf0c09ecd85ebd1006dac80067bce4582af8cf464015d79622c50e32bd6@group.calendar.google.com",
+        "color": "#169aaf"
+    },
+    {
+        "state": "Kentucky",
+        "calendarId": "1ca92a0f612c745022e99c4176e38b06385a1a957f8982c31bfd31a527e7347c@group.calendar.google.com",
+        "friendlyCalId": "f426129ed2b732d8ec71803a6f59b8a4df4eeb6e0d1d349d38887733488d3f24@group.calendar.google.com",
+        "color": "#39fddb"
+    },
+    {
+        "state": "Louisiana",
+        "calendarId": "1aabfab9296887813a720bb61e84ca758bfa7fec8278c2b421c804bba249dd2e@group.calendar.google.com",
+        "friendlyCalId": "48f2925701428834ab17d9c64f14342e01a659fb93acd80b7e253a497f2d416d@group.calendar.google.com",
+        "color": "#8bcba9"
+    },
+    {
+        "state": "Maine",
+        "calendarId": "ca6033346f1c87b2b1aa3e8ab25465112701f346c65917c5ce53063afc5419d8@group.calendar.google.com",
+        "friendlyCalId": "9c8cef21fa6421559fffc1372dbe7ae952b60e783a2145fafd0f9471841f8af0@group.calendar.google.com",
+        "color": "#f760f2"
     }
 ]

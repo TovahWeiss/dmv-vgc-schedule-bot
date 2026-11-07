@@ -48,8 +48,8 @@ with open("configs/graphicConfig.json") as cfg:
     graphicConfig = GraphicConfig.from_dict(json.load(cfg))
     print(f"Loaded graphic config from file")
 
-with open("configs/states.json") as states:
-    stateOptions:list[str] = json.load(states)
+with open("configs/states.json") as stateFile:
+    stateOptions = json.load(stateFile)
     print(f"Loaded {len(stateOptions)} state options from file")
 
 def getEventCalId(e: LocatorEvent) -> str:
@@ -60,10 +60,10 @@ def getEventCalId(e: LocatorEvent) -> str:
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
-def addOrUpdateConfigFile(channelId: int, messageId: int, states: list[str] =None):
+def addOrUpdateConfigFile(channelId: int, messageId: int, inputStates: list[str] =None):
     channels = []
-    if(states is None or len(states) == 0):
-        states = defaultStates
+    if(inputStates is None or len(inputStates) == 0):
+        inputStates = defaultStates
     with open(messageListFile, 'r+') as file:
         channels = json.load(file)
         matches = [x for x in channels if x['channelId'] == channelId]
@@ -72,7 +72,7 @@ def addOrUpdateConfigFile(channelId: int, messageId: int, states: list[str] =Non
         
     for c in channels:
         if c['channelId'] == channelId:
-            c['stateSelections'] = states
+            c['stateSelections'] = inputStates
             
     # create randomly named temporary file to avoid 
     # interference with other thread/asynchronous request
@@ -86,6 +86,7 @@ def addOrUpdateConfigFile(channelId: int, messageId: int, states: list[str] =Non
 async def getVGEvents()-> list[LocatorEvent]:
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
 
+    # this should be sweeping so subscribers get updates regardless of a server using the calendar or not
     states = "["
     for x in calendarConfigs:
         states += f"\"{x.state}\","
@@ -157,6 +158,7 @@ async def getVGEvents()-> list[LocatorEvent]:
         del obj["dupeKey"]
     
     print(f"Fetched {len(data)} individual events from pokedata.ovh")
+    await bot.change_presence(activity=discord.Game(name=f"Currently tracking {len(data)} future events"))
     return [LocatorEvent.from_dict(item) for item in data]    
    
 async def getExistingCalItems(cals:list[CalendarConfig] = None) -> list[GoogleCalendarEvent]:
@@ -413,7 +415,7 @@ async def makeGraphicForChannel(states:list[str]):
         
         titleStart = emojiStart + emojiWidth + 5
         title = e.summary[1:]
-        titleWidth = 8 * len(title)
+        titleWidth = 8.25 * len(title)
         eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= graphicConfig.textPrimaryColor))
         eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=graphicConfig.locationTextColor))
         
@@ -534,7 +536,7 @@ async def runUpdate():
             os.replace(tempfile, messageListFile)
     print(f"update finished at {(datetime.now()).astimezone().isoformat()}")
         
-@bot.slash_command(name="sync", description="get dmv vgc schedule data")
+@bot.slash_command(name="init", description="get dmv vgc schedule data")
 async def sync(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
@@ -563,7 +565,7 @@ async def sync(ctx: discord.ApplicationContext):
     
     runUpdate.start()
 
-@bot.slash_command(name="manualsync", description="force all instances to update")
+@bot.slash_command(name="force", description="force all instances to update")
 async def manualsync(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
@@ -594,29 +596,19 @@ async def updatelog(ctx: discord.ApplicationContext):
         message = "Git is not installed or not in your system PATH."
     
     await ctx.respond(message, ephemeral=True, delete_after=60)
-
-@bot.slash_command(name="addstate", description="Add a state to your channel's calendar")
-@discord.option(
-    "state_al_ky",
-    description="Alabama-Kentucky",
-    choices=stateOptions[:18],
-    required=False
-)
-@discord.option(
-    "state_lo_oh",
-    description="Louisiana-Ohio",
-    choices=stateOptions[18:36],
-    required=False
-)
-@discord.option(
-    "state_ok_wy",
-    description="Oklahoma-Wyoming",
-    choices=stateOptions[36:],
-    required=False
-)
-async def addstate(ctx: discord.ApplicationContext, state_al_ky: str = None, state_lo_oh: str = None, state_ok_wy: str = None ):
-    if state_al_ky is None and state_lo_oh is None and state_ok_wy is None:
-        await ctx.respond("Please select a state to add", ephemeral=True, delete_after=15)
+   
+@bot.slash_command(name="add", description="Add a state to your channel's calendar by state name or abbreviation")
+async def add(ctx: discord.ApplicationContext, state: str):
+    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
+        return
+    if state is None:
+        await ctx.respond(f"Please enter a state, make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)
+        return
+    state  = state.strip().lower()
+    foundValue = next((k for k, v in stateOptions.items() if (k.lower() == state) or (v.lower() == state)), None)
+    if foundValue is None:
+        await ctx.respond(f"No state found named '{state}', make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)     
         return
     
     states = []
@@ -625,29 +617,25 @@ async def addstate(ctx: discord.ApplicationContext, state_al_ky: str = None, sta
         serverConfig = json.load(file)
         matches = [x for x in serverConfig if x['channelId'] == channelId]
         if not matches or len(matches) == 0:
-            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True, timeOut=15)
+            await ctx.respond("No configuration found for this channel. Please run /sync first in the channel to host your calendar, then use this command in the channel.", ephemeral=True, delete_after=15)
             return
     
     if not matches[0]['stateSelections'] is None:
         states = matches[0]['stateSelections']    
     
-    if state_al_ky is not None:
-        state = state_al_ky
-    if state_lo_oh is not None:
-        state = state_lo_oh
-    if state_ok_wy is not None:
-        state = state_ok_wy
-
-    if(state and state not in states):
-        states.append(state)
+    if(foundValue and foundValue not in states):
+        states.append(foundValue)
     states = sorted(states)
     
     addOrUpdateConfigFile(channelId, matches[0]['messageId'], states)
     
-    await ctx.respond(f"States for this channel: {', '.join(states)}", ephemeral=True)
+    await ctx.respond(f"States for this channel: {', '.join(states)}, use /force to instantly refresh the embed", ephemeral=True, delete_after=15)
     
-@bot.slash_command(name="removestate", description="Remove a state from your channel's calendar")
+@bot.slash_command(name="remove", description="Remove a state from your channel's calendar")
 async def removestate(ctx: discord.ApplicationContext):
+    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+            await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
+            return
     states = []
     channelId = ctx.channel_id
     with open(messageListFile, 'r+') as file:
