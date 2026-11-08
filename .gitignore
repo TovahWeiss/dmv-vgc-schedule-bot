@@ -6,3 +6,4 @@ scriptingTest.py
 configs/messageConfigs.json
 modules/__pycache__/
 test utils*
+monitor.py

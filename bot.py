@@ -496,7 +496,7 @@ async def clearFutureForState(cals:list[CalendarConfig]):
                    
 @bot.event
 async def on_ready():
-    print(f"{bot.user} is ready and online!")
+    print(f"{bot.user} is ready and online!, pid is: {os.getpid()}")
     if not Path(messageListFile).is_file():
         with open(messageListFile, "w") as file:
             file.write("[]")

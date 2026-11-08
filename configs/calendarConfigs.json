@@ -190,5 +190,23 @@
         "calendarId": "865566d7f439e57db3be718f556aefe43139efcc32eca85422044e84e7132fc8@group.calendar.google.com",
         "friendlyCalId": "47d8ff17a673c7988f66282c726d4721a84e474f9e02bfd4804429e8e9bb2cdb@group.calendar.google.com",
         "color": "#6d8147"
+    },
+    {
+        "state": "Minnesota",
+        "calendarId": "c463d14f4902f5325ae48a74d4de25222bde2d45083125624b41ea3a1f027428@group.calendar.google.com",
+        "friendlyCalId": "de6fe354a3c913d46956ad1a336cb6bc373299d56b0382f4d3d2ca9db429d088@group.calendar.google.com",
+        "color": "#0c19fb"
+    },
+    {
+        "state": "Mississippi",
+        "calendarId": "374e408d3e33c6886713fb8a3a6222189bc6ccebdbefbee713e97678ec4e61dc@group.calendar.google.com",
+        "friendlyCalId": "2482d9a5ea4249116e965ac3f3485fd131b66e6883e8d10f9fac913382ff3553@group.calendar.google.com",
+        "color": "#1d5995"
+    },
+    {
+        "state": "Missouri",
+        "calendarId": "b68afd12f7778c8c50bcecd4c3b226a6276383e959b5b8e7ed1425ad01947338@group.calendar.google.com",
+        "friendlyCalId": "1a73edd0230e3134e7c6328907b856580a4f271811c207b6943aadb707bb4986@group.calendar.google.com",
+        "color": "#de036b"
     }
 ]
