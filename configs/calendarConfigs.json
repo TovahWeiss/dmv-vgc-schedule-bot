@@ -214,5 +214,53 @@
         "calendarId": "4c0cdea249c4a8b032d51dc1f638a46b3398de30417f93fd47e1e06347a2db37@group.calendar.google.com",
         "friendlyCalId": "3d0756bd9dbb859672fd582a4d42d87239e85b3d3563e1989609cd75b3925cbd@group.calendar.google.com",
         "color": "#876c90"
+    },
+    {
+        "state": "Nebraska",
+        "calendarId": "58f024a20aa5393f9882c9e6134d0445a143b4977aab61470048832992283953@group.calendar.google.com",
+        "friendlyCalId": "7d4952d6d619459b0276e8e2bf3d8c16c167f3f4dde909261b674211b81a16de@group.calendar.google.com",
+        "color": "#95ac10"
+    },
+    {
+        "state": "Nevada",
+        "calendarId": "990b14d6e458adb70b37ff00615c87cc73c02ad0967485a40b53eb92fc962e3c@group.calendar.google.com",
+        "friendlyCalId": "d2682719196b4be87ac4905850f4c7dca6dbb9a7cfe88b6b501bb4ea9959c2e2@group.calendar.google.com",
+        "color": "#3ced0d"
+    },
+    {
+        "state": "New Hampshire",
+        "calendarId": "beb4882f9983333a333cb775141095dfeacf72f45e6a332789e113968e5dd576@group.calendar.google.com",
+        "friendlyCalId": "5bbe2492025874b5f56f98f7031ca363d9a375370b503c507d2fa085177a200c@group.calendar.google.com",
+        "color": "#ebcbb0"
+    },
+    {
+        "state": "New Mexico",
+        "calendarId": "72b3c600607ef52c8d5e7b8c20f2a3eceae70cbdfc9bd0cf749c1d36ba811dcd@group.calendar.google.com",
+        "friendlyCalId": "96efbd7e04e410f65a81006e6dc13bff797b318d5910ad1ffa0b4725618588c2@group.calendar.google.com",
+        "color": "#6c3f56"
+    },
+    {
+        "state": "North Carolina",
+        "calendarId": "410183bf97f43a99874dd73375045d09751104714b1064357bf766165d35f959@group.calendar.google.com",
+        "friendlyCalId": "41d3fc05198d542dff8053ec5a15fc7a3558e668af6058c79528a6dbc8dedef1@group.calendar.google.com",
+        "color": "#9af956"
+    },
+    {
+        "state": "North Dakota",
+        "calendarId": "f1cd179bd5c19d825e15906945bf2ce6d08dacfffcd84d337a9ee6d4476849fd@group.calendar.google.com",
+        "friendlyCalId": "151ddd930f3061792ecae081696cc6e7a1589d9bf217ecd66266c799435411f8@group.calendar.google.com",
+        "color": "#712fee"
+    },
+    {
+        "state": "Oklahoma",
+        "calendarId": "0b513d6039c8d88fdfa5f5761516da83d9e73c2625986e65d01e969338e816e6@group.calendar.google.com",
+        "friendlyCalId": "77745c62dbd2ea1526b31c3b61ada2d0c9ae79ae2efaa4fb2caae338ef12a971@group.calendar.google.com",
+        "color": "#626896"
+    },
+    {
+        "state": "Oregon",
+        "calendarId": "5b49f8f368046bd9b9469fbf67c8d4a1276e8e0712f162df66bd4772daa2e945@group.calendar.google.com",
+        "friendlyCalId": "c5a7ea252810b0c5890ddb2f5da37c6d088941a20869ece865401eba73f5a6d7@group.calendar.google.com",
+        "color": "#e35e1b"
     }
 ]
