@@ -208,5 +208,11 @@
         "calendarId": "b68afd12f7778c8c50bcecd4c3b226a6276383e959b5b8e7ed1425ad01947338@group.calendar.google.com",
         "friendlyCalId": "1a73edd0230e3134e7c6328907b856580a4f271811c207b6943aadb707bb4986@group.calendar.google.com",
         "color": "#de036b"
+    },
+    {
+        "state": "Montana",
+        "calendarId": "4c0cdea249c4a8b032d51dc1f638a46b3398de30417f93fd47e1e06347a2db37@group.calendar.google.com",
+        "friendlyCalId": "3d0756bd9dbb859672fd582a4d42d87239e85b3d3563e1989609cd75b3925cbd@group.calendar.google.com",
+        "color": "#876c90"
     }
 ]
