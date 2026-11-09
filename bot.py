@@ -19,7 +19,6 @@ from google.oauth2 import service_account
 import drawsvg as draw
 from modules.MessageConfig import MessageConfig, MessageEmbedConfig
 from modules.CalendarConfig import CalendarConfig
-from modules.CalendarViewsConfig import CalendarViewsConfig
 from modules.GraphicConfig import GraphicConfig
 from modules.GoogleCalendarEvent import GoogleCalendarEvent
 from modules.LocatorEvent import LocatorEvent
@@ -42,10 +41,6 @@ messageListFile = 'configs/messageConfigs.json'
 with open("configs/calendarConfigs.json") as cfg:
     calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
     print(f"Loaded {len(calendarConfigs)} calendar configs from file")
-
-with open("configs/calendarViewsConfig.json") as cfg:
-    calendarViewsConfig = CalendarViewsConfig.from_dict(json.load(cfg))
-    print(f"Loaded calendar views config from file")
     
 with open("configs/graphicConfig.json") as cfg:
     graphicConfig = GraphicConfig.from_dict(json.load(cfg))
@@ -92,7 +87,6 @@ def addOrUpdateConfigFile(channelId: int, messageId: int, inputStates: list[str]
     # interference with other thread/asynchronous request
     tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
     with open(tempfile, 'w') as f:
-        print('here')
         json.dump([c.to_dict() for c in channels], f, indent=4)
 
     # rename temporary file replacing old file
@@ -462,13 +456,13 @@ async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.embed:
     if not isEmpty(embedCfg.premierSync):
         embed.add_field(
             name="Premier Events", 
-            value=f"[Click here to sync to your calendar]({calendarViewsConfig.premierSync})"
+            value=f"[Click here to sync to your calendar]({embedCfg.premierSync})"
             , inline=True
         )
     if not isEmpty(embedCfg.schedView):
         embed.add_field(
             name="Upcoming Premier Events", 
-            value=f"[View Premier Schedule]({calendarViewsConfig.schedView})"
+            value=f"[View Premier Schedule]({embedCfg.schedView})"
             , inline=True
         )
     
@@ -523,7 +517,7 @@ async def on_ready():
         with open(messageListFile, "w") as file:
             file.write("[]")
     os.makedirs('output', exist_ok=True)
-    # runUpdate.start()
+    runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -589,7 +583,6 @@ async def init(ctx: discord.ApplicationContext):
         , inline=True
     )
        
-    embed.url = calendarViewsConfig.allCalView
     await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True, delete_after=15)
     message = await ctx.send(embed=embed) 
     
@@ -612,11 +605,6 @@ async def force(ctx: discord.ApplicationContext):
         global calendarConfigs
         calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
         print(f"Loaded {len(calendarConfigs)} calendar configs from file")
-
-    # with open("configs/calendarViewsConfig.json") as cfg:
-    #     global calendarViewsConfig
-    #     calendarViewsConfig = CalendarViewsConfig.from_dict(json.load(cfg))
-    #     print(f"Loaded calendar views config from file")
         
     with open("configs/graphicConfig.json") as cfg:
         global graphicConfig
