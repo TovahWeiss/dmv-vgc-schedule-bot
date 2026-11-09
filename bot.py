@@ -60,6 +60,9 @@ def getEventCalId(e: LocatorEvent) -> str:
     if cal and len(cal) > 0:
         return cal[0].friendlyCalId if e.isNonPremier() else cal[0].calendarId
 
+def isEmpty(s:str)->bool:
+    return s is None or len(s.strip()) == 0
+
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
@@ -67,7 +70,6 @@ def makeEmptyConfig(channelId: int, messageId: int)-> MessageConfig:
     embed = MessageEmbedConfig(defaultGraphicTitle,"","","","","")
     return MessageConfig(channelId, messageId, defaultStates, defaultGraphicTitle, embed)
     
-
 def addOrUpdateConfigFile(channelId: int, messageId: int, inputStates: list[str] = None, graphicTitle:str = None):
     channels = []
     if(inputStates is None or len(inputStates) == 0):
@@ -442,46 +444,54 @@ async def makeGraphicForChannel(states:list[str], graphicTitle:str):
     d.save_svg('output/schedule.svg')
     d.save_png('output/schedule.png')
  
-async def buildEmbedForChannel(states:list[str], graphicTitle:str) -> discord.embed:
-    if(states is None or len(states) == 0):
+async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.embed:
+    if(msgCfg.stateSelections is None or len(msgCfg.stateSelections) == 0):
         return
     
-    await makeGraphicForChannel(states, graphicTitle)
+    await makeGraphicForChannel(msgCfg.stateSelections, msgCfg.graphicTitle)
+     
+    embedCfg = msgCfg.embed
+    if isEmpty(embedCfg.title):
+        embedCfg.title = defaultGraphicTitle
          
     embed = discord.Embed(
-        title="DMV VGC Schedule",
+        title=embedCfg.title,
         color=discord.Color.yellow()
     )
     
-    embed.add_field(
-        name="Premier Events", 
-        value=f"[Click here to sync to your calendar]({calendarViewsConfig.premierSync})"
-        , inline=True
-    )
+    if not isEmpty(embedCfg.premierSync):
+        embed.add_field(
+            name="Premier Events", 
+            value=f"[Click here to sync to your calendar]({calendarViewsConfig.premierSync})"
+            , inline=True
+        )
+    if not isEmpty(embedCfg.schedView):
+        embed.add_field(
+            name="Upcoming Premier Events", 
+            value=f"[View Premier Schedule]({calendarViewsConfig.schedView})"
+            , inline=True
+        )
     
-    embed.add_field(
-        name="Upcoming Premier Events", 
-        value=f"[View Premier Schedule]({calendarViewsConfig.schedView})"
-        , inline=True
-    )
+    if not isEmpty(embedCfg.premierSync) or not isEmpty(embedCfg.schedView):
+        embed.add_field(
+            name="", 
+            value=""
+            , inline=False
+        )
     
-    embed.add_field(
-        name="", 
-        value=""
-        , inline=False
-    )
-    
-    embed.add_field(
-        name="League/Friendly Events", 
-        value=f"[Click here to sync to your calendar]({calendarViewsConfig.friendlySync})"
-        , inline=True
-    )
-    
-    embed.add_field(
-        name="Upcoming Friendly Events",
-        value=f"[View Friendly Schedule]({calendarViewsConfig.friendlySchedView})"
-        ,inline=True
-    )
+    if not isEmpty(embedCfg.friendlySync):
+        embed.add_field(
+            name="League/Friendly Events", 
+            value=f"[Click here to sync to your calendar]({embedCfg.friendlySync})"
+            , inline=True
+        )
+        
+    if not isEmpty(embedCfg.friendlySchedView):
+        embed.add_field(
+            name="Upcoming Friendly Events",
+            value=f"[View Friendly Schedule]({embedCfg.friendlySchedView})"
+            ,inline=True
+        )
     
     embed.add_field(
         name="Last updated at", 
@@ -489,7 +499,7 @@ async def buildEmbedForChannel(states:list[str], graphicTitle:str) -> discord.em
         , inline=False
     )
     
-    embed.url = calendarViewsConfig.allCalView
+    embed.url = embedCfg.allCalView
     
     # Display images or graphical assets
     embed.set_image(url="attachment://output/schedule.png")
@@ -544,7 +554,7 @@ async def runUpdate():
             states = defaultStates
             addOrUpdateConfigFile(curChannel, curMessage, states, graphicTitle)
         try: 
-            embed = await buildEmbedForChannel(states, graphicTitle)
+            embed = await buildEmbedForChannel(msg)
             channel = await bot.fetch_channel(curChannel)
             msg = await channel.fetch_message(curMessage)
             await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
@@ -603,10 +613,10 @@ async def force(ctx: discord.ApplicationContext):
         calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
         print(f"Loaded {len(calendarConfigs)} calendar configs from file")
 
-    with open("configs/calendarViewsConfig.json") as cfg:
-        global calendarViewsConfig
-        calendarViewsConfig = CalendarViewsConfig.from_dict(json.load(cfg))
-        print(f"Loaded calendar views config from file")
+    # with open("configs/calendarViewsConfig.json") as cfg:
+    #     global calendarViewsConfig
+    #     calendarViewsConfig = CalendarViewsConfig.from_dict(json.load(cfg))
+    #     print(f"Loaded calendar views config from file")
         
     with open("configs/graphicConfig.json") as cfg:
         global graphicConfig
@@ -614,7 +624,7 @@ async def force(ctx: discord.ApplicationContext):
         print(f"Loaded graphic config from file")
     
     content = f"Loaded {len(calendarConfigs)} calendar configs from file!\n"
-    content += "Loaded calendar views config from file!\n"
+    # content += "Loaded calendar views config from file!\n"
     content += f"Loaded graphic config from file!\n"
     await ctx.respond(content= content + "\nforcing schedule update!", ephemeral=True, delete_after=15)
     runUpdate.start()
