@@ -6,8 +6,8 @@ interface MessageConfig {
   channelId: string;
   messageId: string;
   stateSelections: string[];
-  graphicTitle: string;
   embed: MessageEmbedConfig;
+  image: MessageImageConfig;
 }
 
 interface MessageEmbedConfig {
@@ -15,6 +15,18 @@ interface MessageEmbedConfig {
   schedView: string;
   friendlySchedView: string;
   allCalView: string;
+}
+
+interface MessageImageConfig {
+  title: string;
+  headerGradientStartColor: string;
+  headerGradientEndColor: string;
+  imageBackgroundColor: string;
+  textPrimaryColor: string;
+  headerTextColor: string;
+  locationTextColor: string;
+  rowBackgroundColor: string;
+  highlightColor: string;
 }
 
 interface ConfigResponse {
@@ -58,13 +70,13 @@ interface ConfigResponse {
           @for (config of configs; track $index; let i = $index) {
             <article class="config-card">
               <div class="card-heading">
-                <div class="card-index">Calendar: <span>{{ config.graphicTitle }}</span></div>
+                <div class="card-index">Calendar: <span>{{ config.image.title }}</span></div>
               </div>
 
               <div class="fields-row">
                 <label class="field title-field">
                   <span class="field-label">Graphic title <span class="required">REQUIRED</span></span>
-                  <input [(ngModel)]="config.graphicTitle" maxlength="200" placeholder="Upcoming premier events" [name]="'title-' + i">
+                  <input [(ngModel)]="config.image.title" maxlength="200" placeholder="Upcoming premier events" [name]="'title-' + i">
                   <span class="field-hint">Shown at the top of the event graphic</span>
                 </label>
               </div>
@@ -79,7 +91,7 @@ interface ConfigResponse {
                 <div class="embed-grid">
                   <label class="field">
                     <span class="field-label">Embed title</span>
-                    <input [(ngModel)]="config.embed.title" (ngModelChange)="saved = false" maxlength="256" [name]="'embed-title-' + i">
+                    <input [(ngModel)]="config.embed.title" (ngModelChange)="saved = false" maxlength="35" [name]="'embed-title-' + i">
                   </label>
                   <label class="field">
                     <span class="field-label">Premier schedule view URL</span>
@@ -92,6 +104,53 @@ interface ConfigResponse {
                   <label class="field">
                     <span class="field-label">All calendars view URL</span>
                     <input [(ngModel)]="config.embed.allCalView" (ngModelChange)="saved = false" maxlength="2048" [name]="'all-cal-view-' + i">
+                  </label>
+                </div>
+              </section>
+
+              <section class="embed-section" [attr.aria-labelledby]="'embed-heading-' + i">
+                <div class="states-heading">
+                  <div>
+                    <span class="field-label" [id]="'embed-heading-' + i">Image fields</span>
+                    <span class="field-hint">Edit graphic properties used in the calendar image output for the embed</span>
+                  </div>
+                </div>
+                <label class="field" style="margin-bottom: 1rem;">
+                    <span class="field-label">Image title</span>
+                    <input [(ngModel)]="config.image.title" (ngModelChange)="saved = false" maxlength="35" [name]="'image-title-' + i">
+                </label>
+                <div class="image-grid">
+                  <label class="field">
+                    <span class="field-label">Header gradient start color</span>
+                    <input type="color" [(ngModel)]="config.image.headerGradientStartColor" (ngModelChange)="saved = false" [name]="'header-gradient-start-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Header gradient end color</span>
+                    <input type="color" [(ngModel)]="config.image.headerGradientEndColor" (ngModelChange)="saved = false" [name]="'header-gradient-end-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Image background color</span>
+                    <input type="color" [(ngModel)]="config.image.imageBackgroundColor" (ngModelChange)="saved = false" [name]="'image-background-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Primary text color</span>
+                    <input type="color" [(ngModel)]="config.image.textPrimaryColor" (ngModelChange)="saved = false" [name]="'text-primary-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Header text color</span>
+                    <input type="color" [(ngModel)]="config.image.headerTextColor" (ngModelChange)="saved = false" [name]="'header-text-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Location text color</span>
+                    <input type="color" [(ngModel)]="config.image.locationTextColor" (ngModelChange)="saved = false" [name]="'location-text-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Row background color</span>
+                    <input type="color" [(ngModel)]="config.image.rowBackgroundColor" (ngModelChange)="saved = false" [name]="'row-background-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Highlight color</span>
+                    <input type="color" [(ngModel)]="config.image.highlightColor" (ngModelChange)="saved = false" [name]="'highlight-' + i">
                   </label>
                 </div>
               </section>
@@ -159,6 +218,17 @@ export class AppComponent implements OnInit {
         this.configs = response.items.map((item) => ({
           ...item,
           stateSelections: [...item.stateSelections],
+          image: {
+            ...item.image,
+            headerGradientStartColor: this.colorToHex(item.image.headerGradientStartColor),
+            headerGradientEndColor: this.colorToHex(item.image.headerGradientEndColor),
+            imageBackgroundColor: this.colorToHex(item.image.imageBackgroundColor),
+            textPrimaryColor: this.colorToHex(item.image.textPrimaryColor),
+            headerTextColor: this.colorToHex(item.image.headerTextColor),
+            locationTextColor: this.colorToHex(item.image.locationTextColor),
+            rowBackgroundColor: this.colorToHex(item.image.rowBackgroundColor),
+            highlightColor: this.colorToHex(item.image.highlightColor),
+          },
         }));
         this.states = response.states;
         this.loading = false;
@@ -207,5 +277,18 @@ export class AppComponent implements OnInit {
     return error.status
       ? `The server returned an error (${error.status}). Check the Node server and try again.`
       : 'Could not reach the Node server. Start the app with npm run dev and try again.';
+  }
+
+  private colorToHex(color: string): string {
+    const namedColors: Record<string, string> = {
+      black: '#000000',
+      dodgerblue: '#1e90ff',
+      green: '#008000',
+      grey: '#808080',
+      red: '#ff0000',
+      white: '#ffffff',
+    };
+
+    return namedColors[color.toLowerCase()] ?? color;
   }
 }

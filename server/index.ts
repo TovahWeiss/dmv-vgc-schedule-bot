@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { basename, dirname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type ErrorRequestHandler } from 'express';
 import { parse } from 'lossless-json';
@@ -10,8 +10,8 @@ interface MessageConfig {
   channelId: string;
   messageId: string;
   stateSelections: string[];
-  graphicTitle: string;
   embed: MessageEmbedConfig;
+  image: MessageImageConfig
 }
 
 interface MessageEmbedConfig {
@@ -21,12 +21,24 @@ interface MessageEmbedConfig {
   allCalView: string;
 }
 
+interface MessageImageConfig {
+  title: string;
+  headerGradientStartColor: string;
+  headerGradientEndColor: string;
+  imageBackgroundColor: string;
+  textPrimaryColor: string;
+  headerTextColor: string;
+  locationTextColor: string;
+  rowBackgroundColor: string;
+  highlightColor: string;
+}
+
 interface ConfigFileItem {
   channelId: unknown;
   messageId: unknown;
   stateSelections: string[];
-  graphicTitle: string;
   embed: MessageEmbedConfig;
+  image: MessageImageConfig;
 }
 
 const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url)))) +  "\\dmv vgc calendar\\";
@@ -54,13 +66,23 @@ function idAsString(value: unknown): string | null {
 function isMessageEmbedConfig(value: unknown): value is MessageEmbedConfig {
   return isRecord(value)
     && typeof value['title'] === 'string'
-    && value['title'].length <= 256
+    && value['title'].length <= 35
     && typeof value['schedView'] === 'string'
-    && value['schedView'].length <= 2048
     && typeof value['friendlySchedView'] === 'string'
-    && value['friendlySchedView'].length <= 2048
     && typeof value['allCalView'] === 'string'
-    && value['allCalView'].length <= 2048
+}
+
+function isMessageImageConfig(value: unknown): value is MessageImageConfig {
+  return isRecord(value)
+    && typeof value['title'] === 'string'
+    && typeof value['headerGradientStartColor'] === 'string'
+    && typeof value['headerGradientEndColor'] === 'string'
+    && typeof value['imageBackgroundColor'] === 'string'
+    && typeof value['textPrimaryColor'] === 'string'
+    && typeof value['headerTextColor'] === 'string'
+    && typeof value['locationTextColor'] === 'string'
+    && typeof value['rowBackgroundColor'] === 'string'
+    && typeof value['highlightColor'] === 'string'
 }
 
 function isMessageConfig(value: unknown): value is ConfigFileItem {
@@ -69,8 +91,8 @@ function isMessageConfig(value: unknown): value is ConfigFileItem {
     && idAsString(value['messageId']) !== null
     && Array.isArray(value['stateSelections'])
     && value['stateSelections'].every((state: unknown) => typeof state === 'string')
-    && typeof value['graphicTitle'] === 'string'
-    && isMessageEmbedConfig(value['embed']);
+    && isMessageEmbedConfig(value['embed'])
+    && isMessageImageConfig(value['image']);
 }
 
 async function readStates(): Promise<string[]> {
@@ -99,8 +121,8 @@ async function readConfigs(): Promise<MessageConfig[]> {
       channelId,
       messageId,
       stateSelections: item.stateSelections,
-      graphicTitle: item.graphicTitle,
       embed: item.embed,
+      image: item.image
     };
   });
 }
@@ -112,7 +134,6 @@ function isValidMessageConfig(value: unknown, states: Set<string>): value is Mes
   const channelId = value['channelId'];
   const messageId = value['messageId'];
   const stateSelections = value['stateSelections'];
-  const graphicTitle = value['graphicTitle'];
   return typeof channelId === 'string'
     && /^[1-9]\d{0,19}$/.test(channelId)
     && typeof messageId === 'string'
@@ -120,10 +141,9 @@ function isValidMessageConfig(value: unknown, states: Set<string>): value is Mes
     && Array.isArray(stateSelections)
     && stateSelections.every((state: unknown) => typeof state === 'string' && states.has(state))
     && new Set(stateSelections).size === stateSelections.length
-    && typeof graphicTitle === 'string'
-    && graphicTitle.trim().length > 0
-    && graphicTitle.length <= 200
-    && isMessageEmbedConfig(value['embed']);
+    && isMessageEmbedConfig(value['embed'])
+    && isMessageImageConfig(value['image']);
+
 }
 
 function serializeConfigs(items: MessageConfig[]): string {
@@ -134,8 +154,8 @@ function serializeConfigs(items: MessageConfig[]): string {
       `    "channelId": ${item.channelId},`,
       `    "messageId": ${item.messageId},`,
       `    "stateSelections": ${stateSelections},`,
-      `    "graphicTitle": ${JSON.stringify(item.graphicTitle)},`,
-      `    "embed": ${JSON.stringify(item.embed, null, 2).replace(/\n/g, '\n    ')}`,
+      `    "embed": ${JSON.stringify(item.embed, null, 2).replace(/\n/g, '\n    ')},`,
+      `    "image": ${JSON.stringify(item.image, null, 2).replace(/\n/g, '\n    ')}`,
       '  }',
     ].join('\n');
   });
@@ -157,7 +177,7 @@ app.put('/api/message-configs', async (request, response) => {
   const items: unknown[] = request.body['items'];
   if (!items.every((item) => isValidMessageConfig(item, states))) {
     response.status(400).json({
-      error: 'Each item needs valid numeric IDs, a title, valid embed fields, and only known, non-duplicate states.',
+      error: 'Each item needs valid numeric IDs, a title, valid embed fields,valid image fields, and only known, non-duplicate states.',
     });
     return;
   }

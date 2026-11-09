@@ -63,6 +63,12 @@ h1 { margin-bottom: 8px; color: #26332b; font: 600 clamp(27px, 3.2vw, 36px)/1.15
 .embed-section { padding: 19px 24px 24px; border-top: 1px solid #edf0eb; background: #fdfefd; }
 .embed-section .states-heading { margin-bottom: 16px; }
 .embed-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+.image-section { padding: 19px 24px 24px; border-top: 1px solid #edf0eb; background: #fdfefd; }
+.image-section .states-heading { margin-bottom: 16px; }
+.image-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.image-grid input[type="color"] { width: 100%; height: 28px; padding: 2px; cursor: pointer; }
+
 .states-section { padding: 19px 24px 24px; border-top: 1px solid #edf0eb; background: #fdfefd; }
 .states-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
 .states-heading > div { display: grid; gap: 5px; }
@@ -100,6 +106,7 @@ h1 { margin-bottom: 8px; color: #26332b; font: 600 clamp(27px, 3.2vw, 36px)/1.15
   .title-field { grid-column: 1 / -1; }
   .states-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .embed-grid { grid-template-columns: 1fr; }
+  .image-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
@@ -113,6 +120,7 @@ h1 { margin-bottom: 8px; color: #26332b; font: 600 clamp(27px, 3.2vw, 36px)/1.15
   .title-field { grid-column: auto; }
   .states-section { padding: 17px 16px 20px; }
   .embed-section { padding: 17px 16px 20px; }
+  .image-section { padding: 17px 16px 20px; }
   .states-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .savebar { align-items: stretch; flex-direction: column; }
   .save-hint { text-align: center; }
@@ -158,6 +166,7 @@ h1 { color: #e5e9f1; }
 .field-hint { color: #929cac; }
 
 .embed-section { border-color: #2b3340; background: #171d27; }
+.image-section { border-color: #2b3340; background: #171d27; }
 .states-section { border-color: #2b3340; background: #171d27; }
 .selection-count { color: #b6c9e6; background: #26354d; }
 .state-option { border-color: #303846; color: #aeb8c8; background: #1b222d; }
