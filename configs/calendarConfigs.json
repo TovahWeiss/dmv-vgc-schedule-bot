@@ -262,5 +262,47 @@
         "calendarId": "5b49f8f368046bd9b9469fbf67c8d4a1276e8e0712f162df66bd4772daa2e945@group.calendar.google.com",
         "friendlyCalId": "c5a7ea252810b0c5890ddb2f5da37c6d088941a20869ece865401eba73f5a6d7@group.calendar.google.com",
         "color": "#e35e1b"
+    },
+    {
+        "state": "Rhode Island",
+        "calendarId": "b3a9459c690bec245abc501e8d031fc2adbcc9ee675be1ff5f809ca5a46baa44@group.calendar.google.com",
+        "friendlyCalId": "f5dcb542865653f53778fe25654985e52323991a0152917e702b7b7a3865aae8@group.calendar.google.com",
+        "color": "#227bc0"
+    },
+    {
+        "state": "South Carolina",
+        "calendarId": "c1acbbe41539171fc7381f1ed7f654233ad710f7506c0df5ea26672f07a8c768@group.calendar.google.com",
+        "friendlyCalId": "334e27020b8f0bd5876636432ccde7b0766164bd31b2eefd92d8e53f7c0f8cda@group.calendar.google.com",
+        "color": "#4e7dd3"
+    },
+    {
+        "state": "South Dakota",
+        "calendarId": "94866a8edd6aad2d970212d2265fef6721848e63bc584c715a28b9610e32c20f@group.calendar.google.com",
+        "friendlyCalId": "ba5000e8d06313f2ae544503518fcf9e36ae1d2179033580ae3aac90bb890902@group.calendar.google.com",
+        "color": "#e6748d"
+    },
+    {
+        "state": "Tennessee",
+        "calendarId": "8aa51a5dfef743f35534bba272cc679316fbef4145ff072f8f279c4dc368489a@group.calendar.google.com",
+        "friendlyCalId": "fdc011b6c401d5b4a3c82eff146c0622db060bc03462782ed7558fbe9d04c037@group.calendar.google.com",
+        "color": "#778d16"
+    },
+    {
+        "state": "Vermont",
+        "calendarId": "fbb2c59b7d4b17444f9b20642e7124f3ea25261ec7c017655647f3963eec8538@group.calendar.google.com",
+        "friendlyCalId": "a73f391c2c41205cba6f77f0b0c61ee89315dd62f9d87237c3c1fbb18845bf37@group.calendar.google.com",
+        "color": "#67547c"
+    },
+    {
+        "state": "Washington",
+        "calendarId": "54b4ba203c69c63206e7252b21790ff2b26585f06a29bc69503137620b34f0f0@group.calendar.google.com",
+        "friendlyCalId": "70da37c50b56764e75838264d3ab036e7faa7678ac32f5f928792e33deaf7f4e@group.calendar.google.com",
+        "color": "#e5615e"
+    },
+    {
+        "state": "West Virginia",
+        "calendarId": "d8a364fe4955345162770e68413133288ab98963a5b16a19173cde7343da7693@group.calendar.google.com",
+        "friendlyCalId": "be30dbfb9dd39fd0aca882390aca97a6eae8a09417e30f5cdc2786bd15b50370@group.calendar.google.com",
+        "color": "#27e21c"
     }
 ]
