@@ -19,8 +19,6 @@ interface MessageEmbedConfig {
   schedView: string;
   friendlySchedView: string;
   allCalView: string;
-  premierSync: string;
-  friendlySync: string;
 }
 
 interface ConfigFileItem {
@@ -63,10 +61,6 @@ function isMessageEmbedConfig(value: unknown): value is MessageEmbedConfig {
     && value['friendlySchedView'].length <= 2048
     && typeof value['allCalView'] === 'string'
     && value['allCalView'].length <= 2048
-    && typeof value['premierSync'] === 'string'
-    && value['premierSync'].length <= 2048
-    && typeof value['friendlySync'] === 'string'
-    && value['friendlySync'].length <= 2048;
 }
 
 function isMessageConfig(value: unknown): value is ConfigFileItem {

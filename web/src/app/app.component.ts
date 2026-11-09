@@ -15,8 +15,6 @@ interface MessageEmbedConfig {
   schedView: string;
   friendlySchedView: string;
   allCalView: string;
-  premierSync: string;
-  friendlySync: string;
 }
 
 interface ConfigResponse {
@@ -94,14 +92,6 @@ interface ConfigResponse {
                   <label class="field">
                     <span class="field-label">All calendars view URL</span>
                     <input [(ngModel)]="config.embed.allCalView" (ngModelChange)="saved = false" maxlength="2048" [name]="'all-cal-view-' + i">
-                  </label>
-                  <label class="field">
-                    <span class="field-label">Premier calendar sync URL</span>
-                    <input [(ngModel)]="config.embed.premierSync" (ngModelChange)="saved = false" maxlength="2048" [name]="'premier-sync-' + i">
-                  </label>
-                  <label class="field">
-                    <span class="field-label">Friendly calendar sync URL</span>
-                    <input [(ngModel)]="config.embed.friendlySync" (ngModelChange)="saved = false" maxlength="2048" [name]="'friendly-sync-' + i">
                   </label>
                 </div>
               </section>

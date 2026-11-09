@@ -7,8 +7,6 @@ class MessageEmbedConfig:
     schedView: str
     friendlySchedView: str
     allCalView: str
-    premierSync: str
-    friendlySync: str
 
     @classmethod
     def from_dict(cls, data):

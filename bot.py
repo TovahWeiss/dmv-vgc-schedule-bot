@@ -35,6 +35,7 @@ guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 
 defaultStates = ["Maryland", "Virginia", "District of Columbia"]
 defaultGraphicTitle = "Upcoming Premier Events"
+shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
 
 messageListFile = 'configs/messageConfigs.json'
 
@@ -91,6 +92,14 @@ def addOrUpdateConfigFile(channelId: int, messageId: int, inputStates: list[str]
 
     # rename temporary file replacing old file
     os.replace(tempfile, messageListFile)
+
+def buildCalendarSyncUrls(config: MessageConfig)-> dict:
+    friendly = shareBaseUrl
+    premier = shareBaseUrl
+    calsForConfig = [cal for cal in calendarConfigs if cal.state in config.stateSelections]
+    friendly += "&cid=".join([cal.friendlyCalId for cal in calsForConfig])
+    premier += "&cid=".join([cal.calendarId for cal in calsForConfig]) 
+    return dict(premier=premier, friendly=friendly)    
 
 async def getVGEvents()-> list[LocatorEvent]:
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
@@ -453,10 +462,12 @@ async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.embed:
         color=discord.Color.yellow()
     )
     
-    if not isEmpty(embedCfg.premierSync):
+    calendarSyncUrls = buildCalendarSyncUrls(msgCfg)
+    
+    if not isEmpty(calendarSyncUrls["premier"]):
         embed.add_field(
             name="Premier Events", 
-            value=f"[Click here to sync to your calendar]({embedCfg.premierSync})"
+            value=f"[Click here to sync to your calendar]({calendarSyncUrls["premier"]})"
             , inline=True
         )
     if not isEmpty(embedCfg.schedView):
@@ -466,17 +477,17 @@ async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.embed:
             , inline=True
         )
     
-    if not isEmpty(embedCfg.premierSync) or not isEmpty(embedCfg.schedView):
+    if not isEmpty(calendarSyncUrls["premier"]) or not isEmpty(embedCfg.schedView):
         embed.add_field(
             name="", 
             value=""
             , inline=False
         )
     
-    if not isEmpty(embedCfg.friendlySync):
+    if not isEmpty(calendarSyncUrls["friendly"]):
         embed.add_field(
             name="League/Friendly Events", 
-            value=f"[Click here to sync to your calendar]({embedCfg.friendlySync})"
+            value=f"[Click here to sync to your calendar]({calendarSyncUrls["friendly"]})"
             , inline=True
         )
         
@@ -512,7 +523,7 @@ async def clearFutureForState(cals:list[CalendarConfig]):
                    
 @bot.event
 async def on_ready():
-    print(f"{bot.user} is ready and online!, pid is: {os.getpid()}")
+    print(f"{bot.user} is online, pid is: {os.getpid()}")
     if not Path(messageListFile).is_file():
         with open(messageListFile, "w") as file:
             file.write("[]")
