@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express, { type ErrorRequestHandler } from 'express';
 import { parse } from 'lossless-json';
@@ -11,6 +11,16 @@ interface MessageConfig {
   messageId: string;
   stateSelections: string[];
   graphicTitle: string;
+  embed: MessageEmbedConfig;
+}
+
+interface MessageEmbedConfig {
+  title: string;
+  schedView: string;
+  friendlySchedView: string;
+  allCalView: string;
+  premierSync: string;
+  friendlySync: string;
 }
 
 interface ConfigFileItem {
@@ -18,6 +28,7 @@ interface ConfigFileItem {
   messageId: unknown;
   stateSelections: string[];
   graphicTitle: string;
+  embed: MessageEmbedConfig;
 }
 
 const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url)))) +  "\\dmv vgc calendar\\";
@@ -42,13 +53,30 @@ function idAsString(value: unknown): string | null {
   return /^[1-9]\d{0,19}$/.test(id) ? id : null;
 }
 
+function isMessageEmbedConfig(value: unknown): value is MessageEmbedConfig {
+  return isRecord(value)
+    && typeof value['title'] === 'string'
+    && value['title'].length <= 256
+    && typeof value['schedView'] === 'string'
+    && value['schedView'].length <= 2048
+    && typeof value['friendlySchedView'] === 'string'
+    && value['friendlySchedView'].length <= 2048
+    && typeof value['allCalView'] === 'string'
+    && value['allCalView'].length <= 2048
+    && typeof value['premierSync'] === 'string'
+    && value['premierSync'].length <= 2048
+    && typeof value['friendlySync'] === 'string'
+    && value['friendlySync'].length <= 2048;
+}
+
 function isMessageConfig(value: unknown): value is ConfigFileItem {
   return isRecord(value)
     && idAsString(value['channelId']) !== null
     && idAsString(value['messageId']) !== null
     && Array.isArray(value['stateSelections'])
     && value['stateSelections'].every((state: unknown) => typeof state === 'string')
-    && typeof value['graphicTitle'] === 'string';
+    && typeof value['graphicTitle'] === 'string'
+    && isMessageEmbedConfig(value['embed']);
 }
 
 async function readStates(): Promise<string[]> {
@@ -78,6 +106,7 @@ async function readConfigs(): Promise<MessageConfig[]> {
       messageId,
       stateSelections: item.stateSelections,
       graphicTitle: item.graphicTitle,
+      embed: item.embed,
     };
   });
 }
@@ -99,7 +128,8 @@ function isValidMessageConfig(value: unknown, states: Set<string>): value is Mes
     && new Set(stateSelections).size === stateSelections.length
     && typeof graphicTitle === 'string'
     && graphicTitle.trim().length > 0
-    && graphicTitle.length <= 200;
+    && graphicTitle.length <= 200
+    && isMessageEmbedConfig(value['embed']);
 }
 
 function serializeConfigs(items: MessageConfig[]): string {
@@ -110,7 +140,8 @@ function serializeConfigs(items: MessageConfig[]): string {
       `    "channelId": ${item.channelId},`,
       `    "messageId": ${item.messageId},`,
       `    "stateSelections": ${stateSelections},`,
-      `    "graphicTitle": ${JSON.stringify(item.graphicTitle)}`,
+      `    "graphicTitle": ${JSON.stringify(item.graphicTitle)},`,
+      `    "embed": ${JSON.stringify(item.embed, null, 2).replace(/\n/g, '\n    ')}`,
       '  }',
     ].join('\n');
   });
@@ -132,7 +163,7 @@ app.put('/api/message-configs', async (request, response) => {
   const items: unknown[] = request.body['items'];
   if (!items.every((item) => isValidMessageConfig(item, states))) {
     response.status(400).json({
-      error: 'Each item needs valid numeric IDs, a title, and only known, non-duplicate states.',
+      error: 'Each item needs valid numeric IDs, a title, valid embed fields, and only known, non-duplicate states.',
     });
     return;
   }

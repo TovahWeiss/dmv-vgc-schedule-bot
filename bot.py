@@ -17,6 +17,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 import drawsvg as draw
+from modules.MessageConfig import MessageConfig, MessageEmbedConfig
 from modules.CalendarConfig import CalendarConfig
 from modules.CalendarViewsConfig import CalendarViewsConfig
 from modules.GraphicConfig import GraphicConfig
@@ -62,6 +63,11 @@ def getEventCalId(e: LocatorEvent) -> str:
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
+def makeEmptyConfig(channelId: int, messageId: int)-> MessageConfig:
+    embed = MessageEmbedConfig(defaultGraphicTitle,"","","","","")
+    return MessageConfig(channelId, messageId, defaultStates, defaultGraphicTitle, embed)
+    
+
 def addOrUpdateConfigFile(channelId: int, messageId: int, inputStates: list[str] = None, graphicTitle:str = None):
     channels = []
     if(inputStates is None or len(inputStates) == 0):
@@ -70,21 +76,22 @@ def addOrUpdateConfigFile(channelId: int, messageId: int, inputStates: list[str]
         graphicTitle = defaultGraphicTitle
             
     with open(messageListFile, 'r+') as file:
-        channels = json.load(file)
-        matches = [x for x in channels if x['channelId'] == channelId]
+        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
+        matches = [x for x in channels if x.channelId == channelId]
         if not matches or len(matches) == 0:
-            channels.append({"channelId":channelId, "messageId":messageId, "stateSelections": defaultStates, "graphicTitle":defaultGraphicTitle})
+            channels.append(makeEmptyConfig(channelId, messageId))
         
     for c in channels:
-        if c['channelId'] == channelId:
-            c['stateSelections'] = inputStates
-            c['graphicTitle'] = graphicTitle
+        if c.channelId == channelId:
+            c.stateSelections = inputStates
+            c.graphicTitle = graphicTitle
             
     # create randomly named temporary file to avoid 
     # interference with other thread/asynchronous request
     tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
     with open(tempfile, 'w') as f:
-        json.dump(channels, f, indent=4)
+        print('here')
+        json.dump([c.to_dict() for c in channels], f, indent=4)
 
     # rename temporary file replacing old file
     os.replace(tempfile, messageListFile)
@@ -506,7 +513,7 @@ async def on_ready():
         with open(messageListFile, "w") as file:
             file.write("[]")
     os.makedirs('output', exist_ok=True)
-    runUpdate.start()
+    # runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -524,15 +531,15 @@ async def runUpdate():
     
     channels = []
     with open(messageListFile, 'r+', encoding='utf-8') as file:
-        channels = json.load(file)
+        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
     if not channels:
         return
     
     for msg in channels:
-        curChannel = msg['channelId']
-        curMessage = msg['messageId']
-        states = msg["stateSelections"]
-        graphicTitle = msg['graphicTitle']
+        curChannel = msg.channelId
+        curMessage = msg.messageId
+        states = msg.stateSelections
+        graphicTitle = msg.graphicTitle
         if(states is None or len(states) == 0):
             states = defaultStates
             addOrUpdateConfigFile(curChannel, curMessage, states, graphicTitle)
@@ -543,12 +550,12 @@ async def runUpdate():
             await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
         except discord.errors.NotFound as error:
             with open(messageListFile, 'r+') as file:
-                channels = json.load(file)
-                valids = [x for x in channels if x['channelId'] != curChannel]
+                channels = [MessageConfig.from_dict(item) for item in json.load(file)]
+                valids = [x for x in channels if x.channelId != curChannel]
                     
             tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
             with open(tempfile, 'w') as f:
-                json.dump(valids, f, indent=4)
+                json.dump([c.to_dict() for c in valids], f, indent=4)
 
             # rename temporary file replacing old file
             os.replace(tempfile, messageListFile)
@@ -634,99 +641,6 @@ async def updatelog(ctx: discord.ApplicationContext):
     
     await ctx.respond(message, ephemeral=True, delete_after=60)
    
-@bot.slash_command(name="add", description="Add a state to your channel's calendar by state name or abbreviation")
-async def add(ctx: discord.ApplicationContext, state: str):
-    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
-        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
-        return
-    if state is None:
-        await ctx.respond(f"Please enter a state, make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)
-        return
-    state  = state.strip().lower()
-    foundValue = next((k for k, v in stateOptions.items() if (k.lower() == state) or (v.lower() == state)), None)
-    if foundValue is None:
-        await ctx.respond(f"No state found named '{state}', make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)     
-        return
-    
-    states = []
-    channelId = ctx.channel_id
-    with open(messageListFile, 'r+') as file:
-        serverConfig = json.load(file)
-        matches = [x for x in serverConfig if x['channelId'] == channelId]
-        if not matches or len(matches) == 0:
-            await ctx.respond("No configuration found for this channel. Please run /init first in the channel to host your calendar, then use this command in the channel.", ephemeral=True, delete_after=15)
-            return
-    
-    if not matches[0]['stateSelections'] is None:
-        states = matches[0]['stateSelections']    
-    
-    if(foundValue and foundValue not in states):
-        states.append(foundValue)
-    states = sorted(states)
-    
-    addOrUpdateConfigFile(channelId, matches[0]['messageId'], states, matches[0]['graphicTitle'])
-    
-    await ctx.respond(f"States for this channel: {', '.join(states)}, use /force to instantly refresh the embed", ephemeral=True, delete_after=15)
-    
-@bot.slash_command(name="remove", description="Remove a state from your channel's calendar")
-async def removestate(ctx: discord.ApplicationContext):
-    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
-            await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
-            return
-    states = []
-    channelId = ctx.channel_id
-    with open(messageListFile, 'r+') as file:
-        serverConfig = json.load(file)
-        matches = [x for x in serverConfig if x['channelId'] == channelId]
-        if not matches or len(matches) == 0:
-            await ctx.respond("No configuration found for this channel. Please run /init first in the channel to host your calendar, then use this command in the channel.", ephemeral=True, delete_after=15)
-            return
-    
-    row = 0
-    if not matches[0]['stateSelections'] is None:
-        for index, state in enumerate(matches[0]['stateSelections']):
-            if(index % 5 == 0):
-                row += 1
-                
-            states.append({'id':state, 'row': row})
-    inputView = DynamicView(states)
-    
-    await ctx.response.send_message("Select a state to remove:", view=inputView, ephemeral=True, delete_after=15)   
-    timedOut = await inputView.wait()
-    if timedOut:
-       return
-    
-    matches[0]["stateSelections"].remove(inputView.value)
-    addOrUpdateConfigFile(channelId, matches[0]['messageId'], matches[0]["stateSelections"], matches[0]["graphicTitle"])
-
-@bot.slash_command(name="title", description="Set the channel graphics title.")
-@discord.option(
-    "title",
-    required=False,
-    description="Set the channel graphics title. Leave blank for default.",
-    min_length=0,
-    max_length=35
-)
-async def title(ctx: discord.ApplicationContext, graphic_title: str):
-    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
-        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
-        return
-    if graphic_title is None or len(graphic_title) == 0:
-        graphic_title = defaultGraphicTitle
-    
-    await ctx.respond(f"Setting graphic title to: {graphic_title}", ephemeral=True, delete_after=15)
-    channelId = ctx.channel_id
-    with open(messageListFile, 'r+') as file:
-        serverConfig = json.load(file)
-        matches = [x for x in serverConfig if x['channelId'] == channelId]
-        if not matches or len(matches) == 0:
-            await ctx.respond("No configuration found for this channel. Please run /init first in the channel to host your calendar, then use this command in the channel.", ephemeral=True, delete_after=15)
-            return
-        
-    addOrUpdateConfigFile(channelId, matches[0]['messageId'], matches[0]['stateSelections'], graphic_title)
-    
-    await ctx.respond(f"Graphic title is now set to {graphic_title}, use /force to refresh the graphic", ephemeral=True, delete_after=15)
-
 @bot.slash_command(name="clearfuture", description="Clears a states future events to full refresh for next cycle(debug use)")
 @discord.ext.commands.is_owner()
 async def clearfuture(ctx: discord.ApplicationContext, state: str):

@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 interface MessageConfig {
@@ -7,6 +7,16 @@ interface MessageConfig {
   messageId: string;
   stateSelections: string[];
   graphicTitle: string;
+  embed: MessageEmbedConfig;
+}
+
+interface MessageEmbedConfig {
+  title: string;
+  schedView: string;
+  friendlySchedView: string;
+  allCalView: string;
+  premierSync: string;
+  friendlySync: string;
 }
 
 interface ConfigResponse {
@@ -61,6 +71,41 @@ interface ConfigResponse {
                 </label>
               </div>
 
+              <section class="embed-section" [attr.aria-labelledby]="'embed-heading-' + i">
+                <div class="states-heading">
+                  <div>
+                    <span class="field-label" [id]="'embed-heading-' + i">Embed fields</span>
+                    <span class="field-hint">Edit the title and calendar links shown in this message's embed.</span>
+                  </div>
+                </div>
+                <div class="embed-grid">
+                  <label class="field">
+                    <span class="field-label">Embed title</span>
+                    <input [(ngModel)]="config.embed.title" (ngModelChange)="saved = false" maxlength="256" [name]="'embed-title-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Premier schedule view URL</span>
+                    <input [(ngModel)]="config.embed.schedView" (ngModelChange)="saved = false" maxlength="2048" [name]="'sched-view-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Friendly schedule view URL</span>
+                    <input [(ngModel)]="config.embed.friendlySchedView" (ngModelChange)="saved = false" maxlength="2048" [name]="'friendly-sched-view-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">All calendars view URL</span>
+                    <input [(ngModel)]="config.embed.allCalView" (ngModelChange)="saved = false" maxlength="2048" [name]="'all-cal-view-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Premier calendar sync URL</span>
+                    <input [(ngModel)]="config.embed.premierSync" (ngModelChange)="saved = false" maxlength="2048" [name]="'premier-sync-' + i">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Friendly calendar sync URL</span>
+                    <input [(ngModel)]="config.embed.friendlySync" (ngModelChange)="saved = false" maxlength="2048" [name]="'friendly-sync-' + i">
+                  </label>
+                </div>
+              </section>
+
               <div class="states-section">
                 <div class="states-heading">
                   <div>
@@ -108,13 +153,16 @@ export class AppComponent implements OnInit {
   saved = false;
   error?:string = undefined;
 
+  constructor(private cdr: ChangeDetectorRef){
+
+  }
+
   ngOnInit(): void {
     this.loadConfigs();
   }
 
   loadConfigs(): void {
     this.loading = true;
-    this.error = '';
     this.saved = false;
     this.http.get<ConfigResponse>('/api/message-configs').subscribe({
       next: (response) => {
@@ -124,25 +172,13 @@ export class AppComponent implements OnInit {
         }));
         this.states = response.states;
         this.loading = false;
+        this.cdr.detectChanges()
       },
       error: (error: HttpErrorResponse) => {
         this.error = this.errorMessage(error);
         this.loading = false;
       },
     });
-  }
-
-  addConfig(): void {
-    this.saved = false;
-    this.configs = [
-      ...this.configs,
-      { channelId: '', messageId: '', stateSelections: [], graphicTitle: '' },
-    ];
-  }
-
-  removeConfig(index: number): void {
-    this.saved = false;
-    this.configs = this.configs.filter((_, currentIndex) => currentIndex !== index);
   }
 
   toggleState(config: MessageConfig, state: string, event: Event): void {
@@ -165,6 +201,7 @@ export class AppComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.saved = true;
+        this.cdr.detectChanges();
       },
       error: (error: HttpErrorResponse) => {
         this.error = this.errorMessage(error);
