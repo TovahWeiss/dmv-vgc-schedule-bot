@@ -7,3 +7,8 @@ configs/messageConfigs.json
 modules/__pycache__/
 test utils*
 monitor.py
+!tsconfig.json
+!web/tsconfig.app.json
+node_modules/
+dist/
+.angular/
