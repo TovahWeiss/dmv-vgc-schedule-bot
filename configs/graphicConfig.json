@@ -7,19 +7,10 @@
     "fontFamily": "Arial",
     "rowHeight": 44,
     "rowScheduleStart": 140,
-    "imageBackground": "black",
-    "textPrimaryColor": "black",
-    "headerTextColor": "black",
-    "locationTextColor": "grey",
-    "rowBackground": "white",
-    "highlightColor": "dodgerblue",
     "logoSize": 90,
     "cornerRadius": 10,
     "logoPath": "assets/DMV_Falinks.png",
     "cupIconPath": "assets/cup.png",
     "chalIconPath": "assets/chal.png",
-    "unknownIconPath": "assets/unknown.png",
-    "headerGradientStartColor": "#D0EEF5",
-    "headerGradientEndColor": "#21B7D9",
-    "graphicTitle": "DMV Upcoming Premier Events"
+    "unknownIconPath": "assets/unknown.png"
 }

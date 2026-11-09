@@ -17,7 +17,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 import drawsvg as draw
-from modules.MessageConfig import MessageConfig, MessageEmbedConfig
+from modules.MessageConfig import MessageConfig, MessageEmbedConfig, MessageImageConfig
 from modules.CalendarConfig import CalendarConfig
 from modules.GraphicConfig import GraphicConfig
 from modules.GoogleCalendarEvent import GoogleCalendarEvent
@@ -34,7 +34,7 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 
 defaultStates = ["Maryland", "Virginia", "District of Columbia"]
-defaultGraphicTitle = "Upcoming Premier Events"
+defaultTitle = "Upcoming Premier Events"
 shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
 
 messageListFile = 'configs/messageConfigs.json'
@@ -63,27 +63,29 @@ def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
 def makeEmptyConfig(channelId: int, messageId: int)-> MessageConfig:
-    embed = MessageEmbedConfig(defaultGraphicTitle,"","","","","")
-    return MessageConfig(channelId, messageId, defaultStates, defaultGraphicTitle, embed)
+    embed = MessageEmbedConfig(defaultTitle,"","","")
+    image = MessageImageConfig.from_dict({
+        "title": defaultTitle,
+        "headerGradientStartColor": "#D0EEF5",
+        "headerGradientEndColor": "#21B7D9",
+        "imageBackgroundColor": "black",
+        "textPrimaryColor": "black",
+        "headerTextColor": "black",
+        "locationTextColor": "grey",
+        "rowBackgroundColor": "white",
+        "highlightColor": "dodgerblue"
+    })
+    return MessageConfig(channelId, messageId, defaultStates, embed, image)
     
-def addOrUpdateConfigFile(channelId: int, messageId: int, inputStates: list[str] = None, graphicTitle:str = None):
+def addConfigFile(channelId: int, messageId: int):
     channels = []
-    if(inputStates is None or len(inputStates) == 0):
-        inputStates = defaultStates
-    if(graphicTitle is None or len(graphicTitle) == 0):
-        graphicTitle = defaultGraphicTitle
-            
+   
     with open(messageListFile, 'r+') as file:
         channels = [MessageConfig.from_dict(item) for item in json.load(file)]
         matches = [x for x in channels if x.channelId == channelId]
         if not matches or len(matches) == 0:
             channels.append(makeEmptyConfig(channelId, messageId))
         
-    for c in channels:
-        if c.channelId == channelId:
-            c.stateSelections = inputStates
-            c.graphicTitle = graphicTitle
-            
     # create randomly named temporary file to avoid 
     # interference with other thread/asynchronous request
     tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
@@ -343,8 +345,8 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
     except HttpError as error:
         print(error)      
 
-async def makeGraphicForChannel(states:list[str], graphicTitle:str): 
-    calConfigForChannel = [x for x in calendarConfigs if x.state in states]   
+async def makeGraphicForChannel(msgConfig: MessageConfig): 
+    calConfigForChannel = [x for x in calendarConfigs if x.state in msgConfig.stateSelections]   
     existingEvents = await getExistingCalItems(calConfigForChannel)
     if(existingEvents is None or len(existingEvents) == 0):
         return
@@ -366,13 +368,13 @@ async def makeGraphicForChannel(states:list[str], graphicTitle:str):
     d.append_css(css_rules)
     
     gradient = draw.LinearGradient(1, graphicConfig.embedW/6, graphicConfig.embedW/2, graphicConfig.embedW/3)
-    gradient.add_stop(0, graphicConfig.headerGradientStartColor, 1)
-    gradient.add_stop(1, graphicConfig.headerGradientEndColor, 1)
+    gradient.add_stop(0, msgConfig.image.headerGradientStartColor, 1)
+    gradient.add_stop(1, msgConfig.image.headerGradientEndColor, 1)
     d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill='white', rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
     d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill=gradient, rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
     
     d.append(draw.Image( x=graphicConfig.margin + 20, y=graphicConfig.margin, width=graphicConfig.logoSize, height=graphicConfig.logoSize,  path=graphicConfig.logoPath, embed=True) )
-    d.append(draw.Text(graphicTitle, 54, 640, 50, fill=graphicConfig.headerTextColor, center=True, class_='title-text', font_family=graphicConfig.headerFont)) 
+    d.append(draw.Text(msgConfig.image.title, 54, 640, 50, fill=msgConfig.image.headerTextColor, center=True, class_='title-text', font_family=graphicConfig.headerFont)) 
     
     rowIndex = 0
     for i in range(graphicConfig.headerHeight, graphicConfig.embedH - graphicConfig.rowHeight, graphicConfig.rowHeight):
@@ -383,28 +385,28 @@ async def makeGraphicForChannel(states:list[str], graphicTitle:str):
         
         #draw dividers if dif date from last and write date
         currentStart = datetime.strptime(e.start.dateTime, '%Y-%m-%dT%H:%M:%S%z')
-        d.append(draw.Rectangle(5, i, graphicConfig.embedW-10, graphicConfig.rowHeight, fill=graphicConfig.rowBackground,  rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
+        d.append(draw.Rectangle(5, i, graphicConfig.embedW-10, graphicConfig.rowHeight, fill=msgConfig.image.rowBackgroundColor,  rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
             
         if(rowIndex != 0):
             previousStartDate = datetime.strptime(existingEvents[rowIndex-1].start.dateTime, '%Y-%m-%dT%H:%M:%S%z').date()
             if(currentStart.date() != previousStartDate):
-                d.append(draw.Line(graphicConfig.margin, i, graphicConfig.embedW-graphicConfig.margin, i, stroke=graphicConfig.imageBackground, stroke_width=2))          
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= graphicConfig.textPrimaryColor))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= graphicConfig.textPrimaryColor))
+                d.append(draw.Line(graphicConfig.margin, i, graphicConfig.embedW-graphicConfig.margin, i, stroke=msgConfig.image.imageBackgroundColor, stroke_width=2))          
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= msgConfig.image.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= msgConfig.image.textPrimaryColor))
             else:
-                d.append(draw.Rectangle(graphicConfig.margin, i-10, graphicConfig.embedW-10, graphicConfig.rowHeight, fill=graphicConfig.rowBackground))
+                d.append(draw.Rectangle(graphicConfig.margin, i-10, graphicConfig.embedW-10, graphicConfig.rowHeight, fill=msgConfig.image.rowBackgroundColor))
         else:
             # line 1
             if(currentStart.date() == datetime.now().date()):
-                d.append(draw.Circle(26, i + 20, 16, fill=graphicConfig.highlightColor))
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=graphicConfig.imageBackground))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill=graphicConfig.highlightColor))
+                d.append(draw.Circle(26, i + 20, 16, fill=msgConfig.image.highlightColor))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill=msgConfig.image.imageBackgroundColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill=msgConfig.image.highlightColor))
             else:
-                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= graphicConfig.textPrimaryColor))
-                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= graphicConfig.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%d"), 18, 16, rowBaseline, fill= msgConfig.image.textPrimaryColor))
+                d.append(draw.Text(currentStart.strftime("%b, %a"), 14, 50, rowBaseline, fill= msgConfig.image.textPrimaryColor))
         
         
-        color = graphicConfig.textPrimaryColor
+        color = msgConfig.image.textPrimaryColor
         calConfig = [x for x in calendarConfigs if e.organizer.email == x.calendarId]
         if calConfig and len(calConfig) > 0:
             color = calConfig[0].color
@@ -416,7 +418,7 @@ async def makeGraphicForChannel(states:list[str], graphicTitle:str):
         bullet = draw.Circle(0, -4 , 6, fill=color)
         schedGroup.append(bullet) # Draw a circle
         startTime = currentStart.strftime("%I:%M%p")
-        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill= graphicConfig.textPrimaryColor))
+        schedGroup.append(draw.Text(startTime, 12, 20, 0, fill= msgConfig.image.textPrimaryColor))
             
     # event data
         eventGroup = draw.Group()
@@ -434,8 +436,8 @@ async def makeGraphicForChannel(states:list[str], graphicTitle:str):
         titleStart = emojiStart + emojiWidth + 5
         title = e.summary[1:]
         titleWidth = 8.25 * len(title)
-        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= graphicConfig.textPrimaryColor))
-        eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=graphicConfig.locationTextColor))
+        eventGroup.append(draw.Text(title, rowFontSize, titleStart, 0, fill= msgConfig.image.textPrimaryColor))
+        eventGroup.append(draw.Text(e.location, rowFontSize, titleStart + titleWidth, 0, fill=msgConfig.image.locationTextColor))
         
         rowGroup.append(draw.Use(schedGroup, 0, 0))
         rowGroup.append(draw.Use(eventGroup, 120, 0))
@@ -451,11 +453,11 @@ async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.embed:
     if(msgCfg.stateSelections is None or len(msgCfg.stateSelections) == 0):
         return
     
-    await makeGraphicForChannel(msgCfg.stateSelections, msgCfg.graphicTitle)
+    await makeGraphicForChannel(msgCfg)
      
     embedCfg = msgCfg.embed
     if isEmpty(embedCfg.title):
-        embedCfg.title = defaultGraphicTitle
+        embedCfg.title = defaultTitle
          
     embed = discord.Embed(
         title=embedCfg.title,
@@ -553,11 +555,6 @@ async def runUpdate():
     for msg in channels:
         curChannel = msg.channelId
         curMessage = msg.messageId
-        states = msg.stateSelections
-        graphicTitle = msg.graphicTitle
-        if(states is None or len(states) == 0):
-            states = defaultStates
-            addOrUpdateConfigFile(curChannel, curMessage, states, graphicTitle)
         try: 
             embed = await buildEmbedForChannel(msg)
             channel = await bot.fetch_channel(curChannel)
@@ -600,7 +597,7 @@ async def init(ctx: discord.ApplicationContext):
     channelId = ctx.channel_id
     messageId = message.id
 
-    addOrUpdateConfigFile(channelId, messageId)
+    addConfigFile(channelId, messageId)
     
     runUpdate.start()
 

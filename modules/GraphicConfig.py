@@ -11,21 +11,12 @@ class GraphicConfig:
     fontFamily: str
     rowHeight: int
     rowScheduleStart: int
-    imageBackground: str
-    textPrimaryColor: str
-    headerTextColor: str
-    locationTextColor: str
-    rowBackground: str
-    highlightColor: str
     logoSize: int
     cornerRadius: int
     logoPath: str
     cupIconPath: str
     chalIconPath: str
     unknownIconPath: str
-    headerGradientStartColor: str
-    headerGradientEndColor: str
-    graphicTitle: str
 
     @classmethod
     def from_dict(cls, data):
