@@ -48,7 +48,9 @@ with open("configs/graphicConfig.json") as cfg:
 
 with open("configs/states.json") as stateFile:
     stateOptions = json.load(stateFile)
-    print(f"Loaded {len(stateOptions)} state options from file")
+    
+with open("configs/tzDict.json") as tzFile:
+    tzOptions = json.load(tzFile)
 
 def getEventCalId(e: LocatorEvent) -> str:
     cal = [x for x in calendarConfigs if e.state == x.state]
