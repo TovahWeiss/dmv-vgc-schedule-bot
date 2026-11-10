@@ -34,40 +34,67 @@ interface ConfigResponse {
   states: string[];
 }
 
+interface AuthUser {
+  id: string;
+  username: string;
+}
+
+interface AuthResponse {
+  user: AuthUser | null;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [FormsModule],
   template: `
     <main class="page-shell">
-      <header class="topbar"> 
-        <div style="display:  flex; flex-direction:row; align-items:center;"> 
-          <img src="/assets/DMV_Falinks.png" alt="DMV VGC" style="height: 48px; width:48px">
-          <span style="margin-left:10px; font-size:larger">VGC Calendar Bot<span class="brand-muted">/ CONFIG</span></span>
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-logo" src="/assets/DMV_Falinks.png" alt="DMV VGC">
+          <span>VGC Calendar Bot <span class="brand-muted">/ CONFIG</span></span>
         </div>
+        @if (!authLoading && user) {
+          <div class="auth-controls">
+            <span class="signed-in-user">Signed in as {{ user.username }}</span>
+            <button type="button" class="button button-secondary auth-button" (click)="logout()">Sign out</button>
+          </div>
+        }
       </header>
 
-      @if (error) {
-        <div class="notice notice-error" role="alert">
-          <span class="notice-icon">!</span>
-          <span>{{ error }}</span>
-          <button type="button" class="notice-action" (click)="loadConfigs()">Try again</button>
-        </div>
-      }
-
-      @if (saved) {
-        <div class="notice notice-success" role="status">Changes saved to configs/messageConfigs.json</div>
-      }
-
-      @if (loading) {
-        <div class="loading-panel"><span class="spinner"></span> Loading configurations…</div>
+      @if (authLoading) {
+        <div class="loading-panel"><span class="spinner"></span> Checking Discord login…</div>
+      } @else if (!user) {
+        <section class="login-panel">
+          <h1>Sign in to manage calendars</h1>
+          <p>Use an authorized Discord account to edit calendar settings.</p>
+          @if (authError) {
+            <div class="notice notice-error" role="alert">{{ authError }}</div>
+          }
+          <a class="button button-primary discord-login" href="/auth/discord">Continue with Discord</a>
+        </section>
       } @else {
-        <section class="config-list" aria-label="Message configurations">
-          @for (config of configs; track $index; let i = $index) {
-            <article class="config-card">
-              <div class="card-heading">
-                <div class="card-index">Calendar: <span>{{ config.image.title }}</span></div>
-              </div>
+        @if (error) {
+          <div class="notice notice-error" role="alert">
+            <span class="notice-icon">!</span>
+            <span>{{ error }}</span>
+            <button type="button" class="notice-action" (click)="loadConfigs()">Try again</button>
+          </div>
+        }
+
+        @if (saved) {
+          <div class="notice notice-success" role="status">Changes saved to configs/messageConfigs.json</div>
+        }
+
+        @if (loading) {
+          <div class="loading-panel"><span class="spinner"></span> Loading configurations…</div>
+        } @else {
+          <section class="config-list" aria-label="Message configurations">
+            @for (config of configs; track $index; let i = $index) {
+              <article class="config-card">
+                <div class="card-heading">
+                  <div class="card-index">Calendar: <span>{{ config.image.title }}</span></div>
+                </div>
 
               <div class="fields-row">
                 <label class="field title-field">
@@ -172,24 +199,28 @@ interface ConfigResponse {
                   }
                 </div>
               </div>
-            </article>
-          }
-        </section>
-      }
+              </article>
+            }
+          </section>
+        }
 
-      @if (!loading && !error) {
-        <footer class="savebar">
-          <span class="save-hint">Your edits aren't live until you save.</span>
-          <button class="button button-primary save-button" type="button" (click)="saveConfigs()" [disabled]="saving || !isModified()">
-            @if (saving) { <span class="spinner spinner-light"></span> Saving… } @else { Save changes <span aria-hidden="true">→</span> }
-          </button>
-        </footer>
+        @if (!loading && !error) {
+          <footer class="savebar">
+            <span class="save-hint">Your edits aren't live until you save.</span>
+            <button class="button button-primary save-button" type="button" (click)="saveConfigs()" [disabled]="saving || !isModified()">
+              @if (saving) { <span class="spinner spinner-light"></span> Saving… } @else { Save changes <span aria-hidden="true">→</span> }
+            </button>
+          </footer>
+        }
       }
     </main>
   `,
 })
 export class AppComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  authLoading = true;
+  user: AuthUser | null = null;
+  authError?:string;
   ogConfigs: MessageConfig[] = [];
   configs: MessageConfig[] = [];
   states: string[] = [];
@@ -203,7 +234,37 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadConfigs();
+    this.http.get<AuthResponse>('/api/auth/me').subscribe({
+      next: (response) => {
+        this.user = response.user;
+        debugger;
+        this.authLoading = false;
+        if (this.user) {
+          this.loadConfigs();
+        }
+        this.cdr.detectChanges()
+      },
+      error: () => {
+        this.authLoading = false;
+        this.authError = 'Could not verify your Discord login. Refresh the page and try again.';
+      },
+    });
+  }
+
+  logout(): void {
+    this.http.post('/api/auth/logout', {}).subscribe({
+      next: () => {
+        this.user = null;
+        this.configs = [];
+        this.ogConfigs = [];
+        this.saved = false;
+        this.error = undefined;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.authError = 'Could not sign out. Please try again.';
+      },
+    });
   }
 
   loadConfigs(): void {
@@ -232,7 +293,12 @@ export class AppComponent implements OnInit {
         this.cdr.detectChanges()
       },
       error: (error: HttpErrorResponse) => {
-        this.error = this.errorMessage(error);
+        if (error.status === 401) {
+          this.user = null;
+          this.authError = 'Your Discord login expired. Please sign in again.';
+        } else {
+          this.error = this.errorMessage(error);
+        }
         this.loading = false;
       },
     });
@@ -266,10 +332,29 @@ export class AppComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (error: HttpErrorResponse) => {
-        this.error = this.errorMessage(error);
+        if (error.status === 401) {
+          this.user = null;
+          this.authError = 'Your Discord login expired. Please sign in again.';
+        } else {
+          this.error = this.errorMessage(error);
+        }
         this.saving = false;
       },
     });
+  }
+
+  private authErrorFromLocation(): string {
+    const error = new URLSearchParams(window.location.search).get('authError');
+    if (error === 'not_authorized') {
+      return 'This Discord account is not authorized to manage calendars.';
+    }
+    if (error === 'invalid_state') {
+      return 'Discord sign-in could not be verified. Please try again.';
+    }
+    if (error === 'discord') {
+      return 'Discord sign-in failed. Please try again.';
+    }
+    return '';
   }
 
   private errorMessage(error: HttpErrorResponse): string {

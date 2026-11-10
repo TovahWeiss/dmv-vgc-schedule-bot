@@ -187,3 +187,32 @@ h1 { color: #cccccc; }
 .empty-state p { color: #9d9d9d; }
 .savebar { border-color: #3c3c3c; }
 .save-hint { color: #9d9d9d; }
+
+.brand-logo { width: 48px; height: 48px; object-fit: contain; }
+.auth-controls { display: flex; align-items: center; gap: 12px; }
+.signed-in-user { color: #9d9d9d; font-size: 12px; }
+.auth-button { min-height: 34px; padding: 0 12px; }
+.login-panel {
+  display: flex;
+  max-width: 460px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 15vh auto 0;
+  padding: 32px;
+  border: 1px solid #3c3c3c;
+  border-radius: 12px;
+  background: #252526;
+}
+.login-panel h1 { margin: 0; font-size: 24px; }
+.login-panel p { margin: 0 0 8px; color: #9d9d9d; font-size: 13px; line-height: 1.6; }
+.login-panel .notice { width: 100%; margin: 0 0 4px; }
+.discord-login { text-decoration: none; }
+
+@media (max-width: 560px) {
+  .brand-logo { width: 40px; height: 40px; }
+  .brand { gap: 8px; }
+  .auth-controls { gap: 8px; }
+  .signed-in-user { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .login-panel { margin-top: 10vh; padding: 24px; }
+}

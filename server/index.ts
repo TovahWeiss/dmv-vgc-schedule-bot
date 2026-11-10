@@ -1,9 +1,11 @@
+import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import express, { type ErrorRequestHandler } from 'express';
+import express, { type ErrorRequestHandler, type Request } from 'express';
+import cookieSession from 'cookie-session';
 import { parse } from 'lossless-json';
 
 interface MessageConfig {
@@ -41,19 +43,162 @@ interface ConfigFileItem {
   image: MessageImageConfig;
 }
 
-const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url)))) +  "\\dmv vgc calendar\\";
+const serverDirectory = dirname(fileURLToPath(import.meta.url));
+const projectRoot = basename(dirname(serverDirectory)) === 'dist'
+  ? resolve(serverDirectory, '..', '..')
+  : resolve(serverDirectory, '..');
 const configPath = join(projectRoot, 'configs', 'messageConfigs.json');
 const statesPath = join(projectRoot, 'configs', 'states.json');
 const webPath = join(projectRoot, 'dist', 'web', 'browser');
 const port = Number(process.env['PORT'] ?? 3000);
 const app = express();
+const discordClientId = process.env['DISCORD_CLIENT_ID'];
+const discordClientSecret = process.env['DISCORD_CLIENT_SECRET'];
+const discordRedirectUri = process.env['DISCORD_REDIRECT_URI'];
+const sessionSecret = process.env['SESSION_SECRET'];
+const adminDiscordIds = new Set(
+  (process.env['ADMIN_DISCORD_IDS'] ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean),
+);
+
+if (!sessionSecret) {
+  throw new Error('SESSION_SECRET must be configured.');
+}
+if (!discordClientId || !discordClientSecret || !discordRedirectUri) {
+  throw new Error('DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, and DISCORD_REDIRECT_URI must be configured.');
+}
+if (adminDiscordIds.size === 0 || [...adminDiscordIds].some((id) => !/^[1-9]\d{0,19}$/.test(id))) {
+  throw new Error('ADMIN_DISCORD_IDS must contain one or more valid Discord user IDs.');
+}
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '100kb' }));
+app.use(cookieSession({
+  name: 'dmv-vgc-session',
+  keys: [sessionSecret],
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env['NODE_ENV'] === 'production',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+}));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+function isAuthorizedSessionUser(value: unknown): value is { id: string; username: string } {
+  return isRecord(value)
+    && typeof value['id'] === 'string'
+    && adminDiscordIds.has(value['id'])
+    && typeof value['username'] === 'string';
+}
+
+function isAuthorizedRequest(request: Request): boolean {
+  return isAuthorizedSessionUser(request.session?.['user']);
+}
+
+app.get('/auth/discord', (request, response) => {
+  const state = randomUUID();
+  request.session = { oauthState: state };
+  const authorizationUrl = new URL('https://discord.com/oauth2/authorize');
+  authorizationUrl.search = new URLSearchParams({
+    client_id: discordClientId,
+    redirect_uri: discordRedirectUri,
+    response_type: 'code',
+    scope: 'identify+guilds',
+    state,
+  }).toString();
+  response.redirect(authorizationUrl.toString());
+});
+
+app.get('/auth/callback', async (request, response) => {
+  const code = typeof request.query['code'] === 'string' ? request.query['code'] : '';
+  const state = typeof request.query['state'] === 'string' ? request.query['state'] : '';
+  const expectedState = request.session?.['oauthState'];
+  if (typeof request.query['error'] === 'string') {
+    request.session = null;
+    response.redirect('/?authError=discord');
+    return;
+  }
+  if (!code || !state || typeof expectedState !== 'string' || state !== expectedState) {
+    request.session = null;
+    response.redirect('/?authError=invalid_state');
+    return;
+  }
+
+  try {
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: discordClientId,
+        client_secret: discordClientSecret,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: discordRedirectUri,
+      }),
+    });
+    if (!tokenResponse.ok) {
+      throw new Error(`Discord token exchange failed (${tokenResponse.status}).`);
+    }
+
+    const tokenData: unknown = await tokenResponse.json();
+    if (!isRecord(tokenData) || typeof tokenData['access_token'] !== 'string') {
+      throw new Error('Discord token response did not contain an access token.');
+    }
+
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${tokenData['access_token']}` },
+    });
+    if (!userResponse.ok) {
+      throw new Error(`Discord user lookup failed (${userResponse.status}).`);
+    }
+
+    const userData: unknown = await userResponse.json();
+    if (!isRecord(userData)
+      || typeof userData['id'] !== 'string'
+      || typeof userData['username'] !== 'string') {
+      throw new Error('Discord user response is invalid.');
+    }
+    if (!adminDiscordIds.has(userData['id'])) {
+      request.session = null;
+      response.redirect('/?authError=not_authorized');
+      return;
+    }
+
+    request.session = {
+      user: {
+        id: userData['id'],
+        username: userData['username'],
+      },
+    };
+    response.redirect('/');
+  } catch (error) {
+    console.error('Discord OAuth callback failed:', error);
+    request.session = null;
+    response.redirect('/?authError=discord');
+  }
+});
+
+app.get('/api/auth/me', (request, response) => {
+  const user = request.session?.['user'];
+  response.json({ user: isAuthorizedSessionUser(user) ? user : null });
+});
+
+app.post('/api/auth/logout', (request, response) => {
+  request.session = null;
+  response.json({ ok: true });
+});
+
+app.use('/api', (request, response, next) => {
+  if (isAuthorizedRequest(request)) {
+    next();
+    return;
+  }
+  response.status(401).json({ error: 'Sign in with an authorized Discord account to continue.' });
+});
 
 function idAsString(value: unknown): string | null {
   if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'object') {
