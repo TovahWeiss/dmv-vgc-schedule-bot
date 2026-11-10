@@ -37,6 +37,7 @@ class MessageImageConfig:
 
 @dataclass
 class MessageConfig:
+    guildId: int
     channelId: int
     messageId: int
     stateSelections: list[str]

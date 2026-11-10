@@ -39,8 +39,16 @@ interface AuthUser {
   username: string;
 }
 
+interface AuthGuild {
+  id: string;
+  name: string;
+  icon: string | null;
+  owner: boolean;
+}
+
 interface AuthResponse {
   user: AuthUser | null;
+  guilds: AuthGuild[];
 }
 
 @Component({
@@ -220,6 +228,7 @@ export class AppComponent implements OnInit {
   private readonly http = inject(HttpClient);
   authLoading = true;
   user: AuthUser | null = null;
+  guilds: AuthGuild[] = [];
   authError?:string;
   ogConfigs: MessageConfig[] = [];
   configs: MessageConfig[] = [];
@@ -237,7 +246,7 @@ export class AppComponent implements OnInit {
     this.http.get<AuthResponse>('/api/auth/me').subscribe({
       next: (response) => {
         this.user = response.user;
-        debugger;
+        this.guilds = response.guilds;
         this.authLoading = false;
         if (this.user) {
           this.loadConfigs();
@@ -255,6 +264,7 @@ export class AppComponent implements OnInit {
     this.http.post('/api/auth/logout', {}).subscribe({
       next: () => {
         this.user = null;
+        this.guilds = [];
         this.configs = [];
         this.ogConfigs = [];
         this.saved = false;
@@ -295,6 +305,7 @@ export class AppComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         if (error.status === 401) {
           this.user = null;
+          this.guilds = [];
           this.authError = 'Your Discord login expired. Please sign in again.';
         } else {
           this.error = this.errorMessage(error);
@@ -334,6 +345,7 @@ export class AppComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         if (error.status === 401) {
           this.user = null;
+          this.guilds = [];
           this.authError = 'Your Discord login expired. Please sign in again.';
         } else {
           this.error = this.errorMessage(error);

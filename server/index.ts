@@ -43,6 +43,13 @@ interface ConfigFileItem {
   image: MessageImageConfig;
 }
 
+interface DiscordGuild {
+  id: string;
+  name: string;
+  icon: string | null;
+  owner: boolean;
+}
+
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = basename(dirname(serverDirectory)) === 'dist'
   ? resolve(serverDirectory, '..', '..')
@@ -62,6 +69,7 @@ const adminDiscordIds = new Set(
     .map((id) => id.trim())
     .filter(Boolean),
 );
+const guildsByUserId = new Map<string, DiscordGuild[]>();
 
 if (!sessionSecret) {
   throw new Error('SESSION_SECRET must be configured.');
@@ -93,6 +101,14 @@ function isAuthorizedSessionUser(value: unknown): value is { id: string; usernam
     && typeof value['id'] === 'string'
     && adminDiscordIds.has(value['id'])
     && typeof value['username'] === 'string';
+}
+
+function isDiscordGuild(value: unknown): value is DiscordGuild {
+  return isRecord(value)
+    && typeof value['id'] === 'string'
+    && typeof value['name'] === 'string'
+    && (typeof value['icon'] === 'string' || value['icon'] === null)
+    && typeof value['owner'] === 'boolean';
 }
 
 function isAuthorizedRequest(request: Request): boolean {
@@ -168,6 +184,20 @@ app.get('/auth/callback', async (request, response) => {
       return;
     }
 
+    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+      headers: { Authorization: `Bearer ${tokenData['access_token']}` },
+    });
+    if (!guildsResponse.ok) {
+      throw new Error(`Discord guild lookup failed (${guildsResponse.status}).`);
+    }
+    
+
+    const guildsData: unknown = await guildsResponse.json();
+    if (!Array.isArray(guildsData) || !guildsData.every(isDiscordGuild)) {
+      throw new Error('Discord guild response is invalid.');
+    }
+
+    guildsByUserId.set(userData['id'], guildsData);
     request.session = {
       user: {
         id: userData['id'],
@@ -184,7 +214,11 @@ app.get('/auth/callback', async (request, response) => {
 
 app.get('/api/auth/me', (request, response) => {
   const user = request.session?.['user'];
-  response.json({ user: isAuthorizedSessionUser(user) ? user : null });
+  const authorizedUser = isAuthorizedSessionUser(user) ? user : null;
+  response.json({
+    user: authorizedUser,
+    guilds: authorizedUser ? guildsByUserId.get(authorizedUser.id) ?? [] : [],
+  });
 });
 
 app.post('/api/auth/logout', (request, response) => {

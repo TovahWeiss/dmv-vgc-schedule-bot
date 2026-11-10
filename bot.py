@@ -60,7 +60,7 @@ def isEmpty(s:str)->bool:
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
-def makeEmptyConfig(channelId: int, messageId: int)-> MessageConfig:
+def makeEmptyConfig(guildId: int, channelId: int, messageId: int)-> MessageConfig:
     embed = MessageEmbedConfig(defaultTitle,"","","")
     image = MessageImageConfig.from_dict({
         "title": defaultTitle,
@@ -73,16 +73,16 @@ def makeEmptyConfig(channelId: int, messageId: int)-> MessageConfig:
         "rowBackgroundColor": "white",
         "highlightColor": "dodgerblue"
     })
-    return MessageConfig(channelId, messageId, defaultStates, embed, image)
+    return MessageConfig(guildId, channelId, messageId, defaultStates, embed, image)
     
-def addConfigFile(channelId: int, messageId: int):
+def addConfigFile(guildId: int, channelId: int, messageId: int):
     channels = []
    
     with open(messageListFile, 'r+') as file:
         channels = [MessageConfig.from_dict(item) for item in json.load(file)]
         matches = [x for x in channels if x.channelId == channelId]
         if not matches or len(matches) == 0:
-            channels.append(makeEmptyConfig(channelId, messageId))
+            channels.append(makeEmptyConfig(guildId, channelId, messageId))
         
     # create randomly named temporary file to avoid 
     # interference with other thread/asynchronous request
@@ -528,8 +528,8 @@ async def on_ready():
         with open(messageListFile, "w") as file:
             file.write("[]")
     os.makedirs('output', exist_ok=True)
-    if not runUpdate.is_running():
-        runUpdate.start()
+    # if not runUpdate.is_running():
+        # runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -601,10 +601,11 @@ async def init(ctx: discord.ApplicationContext):
     await ctx.respond(content="Come on Barbie let's go party! Making you a new graphic. Please configure it via the web page.", ephemeral=True, delete_after=15)
     message = await ctx.send(embed=embed) 
     
+    guildId = ctx.guild_id
     channelId = ctx.channel_id
     messageId = message.id
 
-    addConfigFile(channelId, messageId)
+    addConfigFile(guildId, channelId, messageId)
     
     if not runUpdate.is_running():  
         runUpdate.start()
