@@ -88,8 +88,3 @@ class GoogleCalendarEvent:
         if guidSearch:
             return True
         return False
-    
-    def getEventTz(self) -> str:
-        if self.isNonPremier() and not self.hasSanctionedUrl():
-            return 'UTC'
-        return 'America/New_York'
