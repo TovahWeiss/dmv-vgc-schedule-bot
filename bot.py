@@ -6,7 +6,6 @@ import uuid
 import zoneinfo
 import discord
 import os
-from discord import commands
 from dotenv import load_dotenv
 import requests
 import os.path
@@ -579,6 +578,14 @@ async def init(ctx: discord.ApplicationContext):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     
+    with open(messageListFile, 'r+') as file:
+        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
+        valids = [x for x in channels if x.channelId == ctx.channel_id]
+
+    if valids is not None and len(valids) != 0:
+        await ctx.respond("A calendar was found for this channel. Please run /detach to remove the current calendar reference then rerun /init", ephemeral=True, delete_after=15)
+        return
+    
     runUpdate.cancel()
     embed = discord.Embed(
         title="DMV VGC Schedule",
@@ -587,11 +594,11 @@ async def init(ctx: discord.ApplicationContext):
     
     embed.add_field(
         name="Initalizing", 
-        value="Hold tight for like 15 seconds pls"
-        , inline=True
+        value="Hold tight for a while please",
+        inline=True
     )
        
-    await ctx.respond(content="Come on Barbie let's go party!", ephemeral=True, delete_after=15)
+    await ctx.respond(content="Come on Barbie let's go party! Making you a new graphic. Please configure it via the web page.", ephemeral=True, delete_after=15)
     message = await ctx.send(embed=embed) 
     
     channelId = ctx.channel_id
@@ -666,6 +673,47 @@ async def clearfuture(ctx: discord.ApplicationContext, state: str):
     
     await clearFutureForState(cal)
     await ctx.respond(f"Cleared calendars for {foundValue}", ephemeral=True, delete_after=15)
-        
+
+@bot.slash_command(name="refresh", description="refresh the calendar image in this channel")
+async def refresh(ctx: discord.ApplicationContext):
+    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
+        return
+          
+    await ctx.respond(content="Refreshing calendar graphic", ephemeral=True, delete_after=15)
+    
+    with open(messageListFile, 'r+') as file:
+        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
+        valids = [x for x in channels if x.channelId == ctx.channel_id]
+
+    if valids is None or len(valids) == 0:
+        await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
+        return
+    
+    msgConfig = valids[0]
+    embed = await buildEmbedForChannel(msgConfig)
+    channel = await bot.fetch_channel(msgConfig.channelId)
+    msg = await channel.fetch_message(msgConfig.messageId)
+    await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
+
+@bot.slash_command(name="detach", description="Detach the current embed to reinitalize it and stop it from updating")
+async def detach(ctx: discord.ApplicationContext):
+    with open(messageListFile, 'r+') as file:
+        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
+        valids = [x for x in channels if x.channelId == ctx.channel_id]
+
+    if valids is None or len(valids) == 0:
+        await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
+        return
+    
+    channels = [cfg for cfg in channels if cfg.channelId != ctx.channel_id]
+    
+    tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
+    with open(tempfile, 'w') as f:
+        json.dump([c.to_dict() for c in channels], f, indent=4)
+
+    # rename temporary file replacing old file
+    os.replace(tempfile, messageListFile)
+    await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
     
 bot.run(os.getenv('TOKEN')) # run the bot with the token

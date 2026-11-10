@@ -1,14 +1,15 @@
 .env
 output/*
-*.json
 !configs/*
 scriptingTest.py
 configs/messageConfigs.json
 modules/__pycache__/
 test utils*
 monitor.py
-!tsconfig.json
-!web/tsconfig.app.json
 node_modules/
 dist/
 .angular/
+.vscode/
+svcAcct.json
+token.json
+credentials.json
