@@ -19,7 +19,12 @@
               "zone.js"
             ],
             "tsConfig": "web/tsconfig.app.json",
-            "assets": [],
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "web/src/public"
+              }
+            ],
             "styles": [
               "web/src/styles.css"
             ]

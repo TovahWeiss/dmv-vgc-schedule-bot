@@ -40,15 +40,11 @@ interface ConfigResponse {
   imports: [FormsModule],
   template: `
     <main class="page-shell">
-      <header class="topbar">
-        <a class="brand" href="/" aria-label="Message config editor home">
-          <span class="brand-mark">M</span>
-          <span>DMV VGC <span class="brand-muted">/ CONFIG</span></span>
-        </a>
-        <span class="server-status" [class.online]="!loading && !error">
-          <span class="status-dot"></span>
-          {{ loading ? 'Connecting' : error ? 'Connection issue' : 'Local config' }}
-        </span>
+      <header class="topbar"> 
+        <div style="display:  flex; flex-direction:row; align-items:center;"> 
+          <img src="/assets/DMV_Falinks.png" alt="DMV VGC" style="height: 48px; width:48px">
+          <span style="margin-left:10px; font-size:larger">VGC Calendar Bot<span class="brand-muted">/ CONFIG</span></span>
+        </div>
       </header>
 
       @if (error) {
@@ -184,7 +180,7 @@ interface ConfigResponse {
       @if (!loading && !error) {
         <footer class="savebar">
           <span class="save-hint">Your edits aren't live until you save.</span>
-          <button class="button button-primary save-button" type="button" (click)="saveConfigs()" [disabled]="saving">
+          <button class="button button-primary save-button" type="button" (click)="saveConfigs()" [disabled]="saving || !isModified()">
             @if (saving) { <span class="spinner spinner-light"></span> Saving… } @else { Save changes <span aria-hidden="true">→</span> }
           </button>
         </footer>
@@ -194,7 +190,7 @@ interface ConfigResponse {
 })
 export class AppComponent implements OnInit {
   private readonly http = inject(HttpClient);
-
+  ogConfigs: MessageConfig[] = [];
   configs: MessageConfig[] = [];
   states: string[] = [];
   loading = true;
@@ -230,6 +226,7 @@ export class AppComponent implements OnInit {
             highlightColor: this.colorToHex(item.image.highlightColor),
           },
         }));
+        this.ogConfigs = JSON.parse(JSON.stringify(this.configs));
         this.states = response.states;
         this.loading = false;
         this.cdr.detectChanges()
@@ -253,6 +250,10 @@ export class AppComponent implements OnInit {
       : config.stateSelections.filter((selected) => selected !== state);
   }
 
+  isModified(): boolean{
+    return JSON.stringify(this.configs) != JSON.stringify(this.ogConfigs)
+  }
+
   saveConfigs(): void {
     this.saving = true;
     this.saved = false;
@@ -261,6 +262,7 @@ export class AppComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.saved = true;
+        this.ogConfigs = JSON.parse(JSON.stringify(this.configs));
         this.cdr.detectChanges();
       },
       error: (error: HttpErrorResponse) => {
