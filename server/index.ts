@@ -7,8 +7,10 @@ import { fileURLToPath } from 'node:url';
 import express, { type ErrorRequestHandler, type Request } from 'express';
 import cookieSession from 'cookie-session';
 import { parse } from 'lossless-json';
+import { PermissionsBitField } from 'discord.js';
 
 interface MessageConfig {
+  guildId: string;
   channelId: string;
   messageId: string;
   stateSelections: string[];
@@ -36,6 +38,7 @@ interface MessageImageConfig {
 }
 
 interface ConfigFileItem {
+  guildId: unknown;
   channelId: unknown;
   messageId: unknown;
   stateSelections: string[];
@@ -44,10 +47,14 @@ interface ConfigFileItem {
 }
 
 interface DiscordGuild {
+  banner: any;
+  features: string[];
   id: string;
   name: string;
   icon: string | null;
   owner: boolean;
+  permissions:number;
+  permissions_new:string;
 }
 
 const serverDirectory = dirname(fileURLToPath(import.meta.url));
@@ -99,7 +106,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isAuthorizedSessionUser(value: unknown): value is { id: string; username: string } {
   return isRecord(value)
     && typeof value['id'] === 'string'
-    && adminDiscordIds.has(value['id'])
     && typeof value['username'] === 'string';
 }
 
@@ -178,19 +184,13 @@ app.get('/auth/callback', async (request, response) => {
       || typeof userData['username'] !== 'string') {
       throw new Error('Discord user response is invalid.');
     }
-    if (!adminDiscordIds.has(userData['id'])) {
-      request.session = null;
-      response.redirect('/?authError=not_authorized');
-      return;
-    }
-
+    
     const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
-      headers: { Authorization: `Bearer ${tokenData['access_token']}` },
+      headers: { Authorization:`Bearer ${tokenData['access_token']}` },
     });
     if (!guildsResponse.ok) {
       throw new Error(`Discord guild lookup failed (${guildsResponse.status}).`);
     }
-    
 
     const guildsData: unknown = await guildsResponse.json();
     if (!Array.isArray(guildsData) || !guildsData.every(isDiscordGuild)) {
@@ -215,9 +215,12 @@ app.get('/auth/callback', async (request, response) => {
 app.get('/api/auth/me', (request, response) => {
   const user = request.session?.['user'];
   const authorizedUser = isAuthorizedSessionUser(user) ? user : null;
+  let guilds =  authorizedUser ? guildsByUserId.get(authorizedUser.id) ?? [] : [];
+
+  guilds = guilds.filter((guild) => guild.owner || new PermissionsBitField(BigInt(guild.permissions_new)).has(PermissionsBitField.Flags.Administrator))
   response.json({
     user: authorizedUser,
-    guilds: authorizedUser ? guildsByUserId.get(authorizedUser.id) ?? [] : [],
+    guilds:  guilds,
   });
 });
 
@@ -268,6 +271,7 @@ function isMessageConfig(value: unknown): value is ConfigFileItem {
   return isRecord(value)
     && idAsString(value['channelId']) !== null
     && idAsString(value['messageId']) !== null
+    && idAsString(value['guildId']) !== null
     && Array.isArray(value['stateSelections'])
     && value['stateSelections'].every((state: unknown) => typeof state === 'string')
     && isMessageEmbedConfig(value['embed'])
@@ -283,33 +287,41 @@ async function readStates(): Promise<string[]> {
   return Object.keys(parsed);
 }
 
-async function readConfigs(): Promise<MessageConfig[]> {
+async function readConfigs(userId:string, guildIds: string[]): Promise<MessageConfig[]> {
   const contents = await readFile(configPath, 'utf8');
   const parsed: unknown = parse(contents);
   if (!Array.isArray(parsed) || !parsed.every(isMessageConfig)) {
     throw new Error('configs/messageConfigs.json must contain an array of valid message configurations.');
   }
 
-  return parsed.map((item) => {
+  const ret = parsed.map((item) => {
     const channelId = idAsString(item.channelId);
+    const guildId = idAsString(item.guildId);
     const messageId = idAsString(item.messageId);
-    if (channelId === null || messageId === null) {
+    if (channelId === null || messageId === null || guildId === null) {
       throw new Error('configs/messageConfigs.json contains an invalid Discord ID.');
     }
     return {
-      channelId,
-      messageId,
+      guildId: guildId,
+      channelId: channelId,
+      messageId: messageId,
       stateSelections: item.stateSelections,
       embed: item.embed,
       image: item.image
     };
   });
+
+  if (adminDiscordIds.has(userId)) {
+    return ret;
+  }
+  return ret.filter(x=>guildIds.indexOf(x.guildId) != -1);
 }
 
 function isValidMessageConfig(value: unknown, states: Set<string>): value is MessageConfig {
   if (!isRecord(value)) {
     return false;
   }
+  const guildId = value['guildId'];
   const channelId = value['channelId'];
   const messageId = value['messageId'];
   const stateSelections = value['stateSelections'];
@@ -317,6 +329,8 @@ function isValidMessageConfig(value: unknown, states: Set<string>): value is Mes
     && /^[1-9]\d{0,19}$/.test(channelId)
     && typeof messageId === 'string'
     && /^[1-9]\d{0,19}$/.test(messageId)
+    && typeof guildId === 'string'
+    && /^[1-9]\d{0,19}$/.test(guildId)
     && Array.isArray(stateSelections)
     && stateSelections.every((state: unknown) => typeof state === 'string' && states.has(state))
     && new Set(stateSelections).size === stateSelections.length
@@ -330,6 +344,7 @@ function serializeConfigs(items: MessageConfig[]): string {
     const stateSelections = JSON.stringify(item.stateSelections, null, 2).replace(/\n/g, '\n    ');
     return [
       '  {',
+      `    "guildId": ${item.guildId},`,
       `    "channelId": ${item.channelId},`,
       `    "messageId": ${item.messageId},`,
       `    "stateSelections": ${stateSelections},`,
@@ -341,8 +356,10 @@ function serializeConfigs(items: MessageConfig[]): string {
   return `[\n${records.join(',\n')}\n]\n`;
 }
 
-app.get('/api/message-configs', async (_request, response) => {
-  const [items, states] = await Promise.all([readConfigs(), readStates()]);
+app.post('/api/message-configs', async (request, response) => {
+  const guildIds:string[] = request.body['guildIds']
+  const userId:string = request.body['userId']
+  const [items, states] = await Promise.all([readConfigs(userId, guildIds), readStates()]);
   response.json({ items, states });
 });
 

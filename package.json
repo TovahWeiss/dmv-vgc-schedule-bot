@@ -16,6 +16,7 @@
     "@angular/forms": "^21.0.0",
     "@angular/platform-browser": "^21.0.0",
     "cookie-session": "^2.1.0",
+    "discord.js": "^14.28.1",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "lossless-json": "^4.2.0",

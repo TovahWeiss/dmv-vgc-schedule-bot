@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 interface MessageConfig {
+  guildId: string;
   channelId: string;
   messageId: string;
   stateSelections: string[];
@@ -280,7 +281,7 @@ export class AppComponent implements OnInit {
   loadConfigs(): void {
     this.loading = true;
     this.saved = false;
-    this.http.get<ConfigResponse>('/api/message-configs').subscribe({
+    this.http.post<ConfigResponse>('/api/message-configs',{ userId: this.user!.id, guildIds: this.guilds.map(x=>x.id) }).subscribe({
       next: (response) => {
         this.configs = response.items.map((item) => ({
           ...item,
@@ -353,20 +354,6 @@ export class AppComponent implements OnInit {
         this.saving = false;
       },
     });
-  }
-
-  private authErrorFromLocation(): string {
-    const error = new URLSearchParams(window.location.search).get('authError');
-    if (error === 'not_authorized') {
-      return 'This Discord account is not authorized to manage calendars.';
-    }
-    if (error === 'invalid_state') {
-      return 'Discord sign-in could not be verified. Please try again.';
-    }
-    if (error === 'discord') {
-      return 'Discord sign-in failed. Please try again.';
-    }
-    return '';
   }
 
   private errorMessage(error: HttpErrorResponse): string {
