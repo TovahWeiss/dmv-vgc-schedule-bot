@@ -49,9 +49,6 @@ with open("configs/graphicConfig.json") as cfg:
 with open("configs/states.json") as stateFile:
     stateOptions = json.load(stateFile)
     
-with open("configs/tzDict.json") as tzFile:
-    tzOptions = json.load(tzFile)
-
 def getEventCalId(e: LocatorEvent) -> str:
     cal = [x for x in calendarConfigs if e.state == x.state]
     if cal and len(cal) > 0:
@@ -112,7 +109,7 @@ async def getVGEvents()-> list[LocatorEvent]:
     for x in calendarConfigs:
         states += f"\"{x.state}\","
     states = states.rstrip(",") + "]"
-    
+   
     page = 0
     data = []
     while True:
@@ -266,10 +263,10 @@ async def pushToCal(data: list[LocatorEvent], existingEvents: list[GoogleCalenda
                 'location': e.street_address,
                 'description': typeLabel + ('\n<a href="' + e.pokemon_url+ '">Official Event Page</a>' if e.hasSanctionedUrl() else '') + '\n\n\n' + e.guid,
                 'start': {
-                    'dateTime': startTime.isoformat(),
+                    'dateTime': startTime.astimezone(zoneinfo.ZoneInfo(e.getEventTz())).isoformat(),
                 },
                 'end': {
-                    'dateTime': endTime.astimezone().isoformat(),
+                    'dateTime': endTime.astimezone(zoneinfo.ZoneInfo(e.getEventTz())).isoformat(),
                 }
             }
 
@@ -295,12 +292,12 @@ async def checkAndUpdateEvents(playListings: list[LocatorEvent], existingCalEven
                     continue
                 
                 popEvent = popEventMatches[0]
-                popWhenAdjusted = datetime.strptime(popEvent.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(popEvent.getEventTz())).astimezone()
-                
+                popWhenAdjusted = datetime.strptime(popEvent.when, '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(popEvent.getEventTz()))
+                calWhen = datetime.strptime(calEvent.start.dateTime, '%Y-%m-%dT%H:%M:%S%z')
                 # no update needed
-                if str(calEvent.start.dateTime).replace('T', ' ') == str(popWhenAdjusted):
+                if popWhenAdjusted == calWhen:
                     continue
-                       
+                
                 endTime = popWhenAdjusted + timedelta(0,0,0,0,0,3)
                 calId = getEventCalId(popEvent)                
                     
@@ -309,7 +306,7 @@ async def checkAndUpdateEvents(playListings: list[LocatorEvent], existingCalEven
                         'dateTime': popWhenAdjusted.isoformat(),
                     },
                     'end': {
-                        'dateTime': endTime.astimezone().isoformat(),
+                        'dateTime': endTime.isoformat(),
                     }
                 }
                 
@@ -531,7 +528,8 @@ async def on_ready():
         with open(messageListFile, "w") as file:
             file.write("[]")
     os.makedirs('output', exist_ok=True)
-    runUpdate.start()
+    if not runUpdate.is_running():
+        runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -608,7 +606,8 @@ async def init(ctx: discord.ApplicationContext):
 
     addConfigFile(channelId, messageId)
     
-    runUpdate.start()
+    if not runUpdate.is_running():  
+        runUpdate.start()
 
 @bot.slash_command(name="force", description="force all instances to update")
 async def force(ctx: discord.ApplicationContext):
@@ -632,7 +631,9 @@ async def force(ctx: discord.ApplicationContext):
     # content += "Loaded calendar views config from file!\n"
     content += f"Loaded graphic config from file!\n"
     await ctx.respond(content= content + "\nforcing schedule update!", ephemeral=True, delete_after=15)
-    runUpdate.start()
+    
+    if not runUpdate.is_running():  
+            runUpdate.start()
 
 @bot.slash_command(name="updatelog", description="prints bot update log")
 async def updatelog(ctx: discord.ApplicationContext):
