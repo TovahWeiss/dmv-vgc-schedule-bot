@@ -51,5 +51,9 @@ class MessageConfig:
         message_data["image"] = MessageImageConfig.from_dict(message_data["image"])
         return cls(**message_data)
 
-    def to_dict(self):
-        return asdict(self)
+    def to_api_response_dict(self):
+        d = asdict(self)
+        d['guildId'] = str(d["guildId"])
+        d['messageId'] = str(d["messageId"])
+        d['channelId'] = str(d["channelId"])
+        return d

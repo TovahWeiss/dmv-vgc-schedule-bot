@@ -1,15 +1,10 @@
 .env
 output/*
 !configs/*
-scriptingTest.py
 configs/messageConfigs.json
 modules/__pycache__/
 test utils*
-monitor.py
-node_modules/
-dist/
-.angular/
-.vscode/
 svcAcct.json
 token.json
 credentials.json
+.vscode*

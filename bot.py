@@ -93,27 +93,32 @@ def buildCalendarSyncUrls(config: MessageConfig)-> dict:
     return dict(premier=premier, friendly=friendly)    
 
 async def putConfigs(configs: list[MessageConfig]):
-    
     try:
-        url = f"{apiBase}/consume-configs"
+        url = f"{apiBase}/dump-configs"
         response = requests.post(
             url,
-            json={"items": [config.to_dict() for config in configs]},
+            json={"items": [config.to_api_response_dict() for config in configs]},
         )
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"Error: {e}")
-        return
+        print(f"Error updating configs: {e}")
+        raise e
         
 async def getConfigs()-> list[MessageConfig]:
     try:
         url = f"{apiBase}/message-configs"
         response = requests.get(url)
         response.raise_for_status()
-        return [MessageConfig.from_dict(item) for item in response.json()]
+        responseObj = []
+        for res in response.json():
+            res['guildId'] = int(res['guildId'])
+            res['channelId'] = int(res['channelId'])
+            res['messageId'] = int(res['messageId'])
+            responseObj.append(MessageConfig.from_dict(res))
+        return responseObj
     except requests.exceptions.RequestException as e:
-        print(f"Error: {e}")
-        return []
+        print(f"Error getting configs: {e}")
+        raise e
     
 async def getVGEvents()-> list[LocatorEvent]:
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
@@ -176,8 +181,8 @@ async def getVGEvents()-> list[LocatorEvent]:
                 page += 1
         
         except requests.exceptions.RequestException as e:
-            print(f"Error: {e}")
-            break
+            print(f"Error getting data from pokedata: {e}")
+            raise e
                 
     # pokedata sucks at deleting old info, best option i could think of
     data = sorted(data, key=lambda event: ( datetime.strptime(event['when'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=zoneinfo.ZoneInfo(LocatorEvent.from_dict(event).getEventTz())), event['guid']))
@@ -231,7 +236,8 @@ async def getExistingCalItems(cals:list[CalendarConfig] = None) -> list[GoogleCa
             return []
         return [GoogleCalendarEvent.from_dict(event) for event in events]
     except HttpError as error:
-        print(f"An error occurred: {error}")
+        print(f"An error occurred getting calendar data from google: {error}")
+        raise error
                  
 async def pushToCal(data: list[LocatorEvent], existingEvents: list[GoogleCalendarEvent]):
     creds = getSACreds() 
@@ -288,7 +294,8 @@ async def pushToCal(data: list[LocatorEvent], existingEvents: list[GoogleCalenda
             print ('Event created: %s at %s' % (calEvent.get('htmlLink'), now.isoformat()))
             
     except HttpError as error:
-        print(f"An error occurred: {error}")
+        print(f"An error occurred pushing calendar data to Google: {error}")
+        raise e
 
 async def checkAndUpdateEvents(playListings: list[LocatorEvent], existingCalEvents: list[GoogleCalendarEvent]):
     creds = creds = getSACreds() 
@@ -329,7 +336,8 @@ async def checkAndUpdateEvents(playListings: list[LocatorEvent], existingCalEven
                 print ('Event updated: %s at %s' % (calEvent.get('htmlLink'), now))
                           
     except HttpError as error:
-        print(error)
+        print(f"Error occured updating Google calendar events: {error}")
+        raise error
  
 async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEvents: list[GoogleCalendarEvent]):
     creds = getSACreds() 
@@ -355,7 +363,8 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
                 print ('Event deleted: %s at %s' % (calEvent.summary, now))
                           
     except HttpError as error:
-        print(error)      
+        print(f"Error occured deleting calendar events: {error}")
+        raise error   
 
 async def makeGraphicForChannel(msgConfig: MessageConfig): 
     calConfigForChannel = [x for x in calendarConfigs if x.state in msgConfig.stateSelections]   
@@ -533,7 +542,7 @@ async def clearFutureForState(cals:list[CalendarConfig]):
             service.events().delete(calendarId=calEvent.organizer.email, eventId=calEvent.id).execute()
             print ('Event deleted: %s at %s' % (calEvent.summary, now))                   
     except HttpError as error:
-        print(error)      
+        print(f"Error occured clearing calendar events: {error}")      
                    
 @bot.event
 async def on_ready():
@@ -545,36 +554,42 @@ async def on_ready():
 
 @tasks.loop(hours=1)
 async def runUpdate():
+    runUpdate.change_interval(hours=1)
     print(f"running update at {(datetime.now()).astimezone().isoformat()}")
-    data = await getVGEvents()
-    existingEvents = await getExistingCalItems()
+    try:
+        data = await getVGEvents()
+        existingEvents = await getExistingCalItems()
     
-    await pushToCal(data, existingEvents)
-    await checkAndUpdateEvents(data, existingEvents)
-    await checkAndDeleteEvents(data, existingEvents)
-    
-    curChannel = None
-    curMessage = None
-    
-    channels = await getConfigs()
-    if not channels:
-        return
-    
-    for msg in channels:
-        curChannel = msg.channelId
-        curMessage = msg.messageId
-        try: 
-            embed = await buildEmbedForChannel(msg)
-            channel = await bot.fetch_channel(curChannel)
-            msg = await channel.fetch_message(curMessage)
-            await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
-        except discord.errors.NotFound as error:
-            channels = await getConfigs()
-            valids = [x for x in channels if x.channelId != curChannel]
-                    
-            await putConfigs(valids)
+        await pushToCal(data, existingEvents)
+        await checkAndUpdateEvents(data, existingEvents)
+        await checkAndDeleteEvents(data, existingEvents)
+        
+        curChannel = None
+        curMessage = None
+        
+        channels = await getConfigs()
+        if not channels:
+            return
+        
+        for msg in channels:
+            curChannel = msg.channelId
+            curMessage = msg.messageId
+            try: 
+                embed = await buildEmbedForChannel(msg)
+                channel = await bot.fetch_channel(curChannel)
+                msg = await channel.fetch_message(curMessage)
+                await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
+            except discord.errors.NotFound as error:
+                channels = await getConfigs()
+                valids = [x for x in channels if x.channelId != curChannel]
+                        
+                await putConfigs(valids)
 
-    print(f"update finished at {(datetime.now()).astimezone().isoformat()}")
+        print(f"update finished at {(datetime.now()).astimezone().isoformat()}")
+    except Exception as e:
+        print(f"Update failed at {datetime.now().isoformat()}, re-executing loop in 15 minutes")
+        runUpdate.change_interval(minutes=15)
+        
         
 @bot.slash_command(name="init", description="initalize calendar to this channel")
 async def init(ctx: discord.ApplicationContext):
@@ -641,9 +656,6 @@ async def force(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="updatelog", description="prints bot update log")
 async def updatelog(ctx: discord.ApplicationContext):
-    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
-        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
-        return
     message = ""
     try:
         # Runs git log and limits the output to the last 5 entries
@@ -655,9 +667,11 @@ async def updatelog(ctx: discord.ApplicationContext):
         )
         message = f"```{result.stdout}```"
     except subprocess.CalledProcessError as e:
-        message = f"Error running git log: {e.stderr}"
+        await ctx.respond(f"Error running git log: {e.stderr}", ephemeral=True, delete_after=60)
+        raise e
     except FileNotFoundError:
-        message = "Git is not installed or not in your system PATH."
+        await ctx.respond(f"Git is not installed or the server system PATH. Please yell at Tovah", ephemeral=True, delete_after=60)
+        raise e
     
     await ctx.respond(message, ephemeral=True, delete_after=60)
    
@@ -705,13 +719,13 @@ async def refresh(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="detach", description="Detach the current embed to reinitalize it and stop it from updating")
 async def detach(ctx: discord.ApplicationContext):
+    await ctx.respond("Removing current channel config...", ephemeral=True, delete_after=15)
     channels = await getConfigs()
     valids = [x for x in channels if x.channelId == ctx.channel_id]
 
     if valids is None or len(valids) == 0:
         await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
         return
-    
     channels = [cfg for cfg in channels if cfg.channelId != ctx.channel_id]
     
     await putConfigs(channels)
