@@ -35,8 +35,7 @@ guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 defaultStates = ["Maryland", "Virginia", "District of Columbia"]
 defaultTitle = "Upcoming Premier Events"
 shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
-
-messageListFile = 'configs/messageConfigs.json'
+apiBase = "http://localhost:3000/api"
 
 with open("configs/calendarConfigs.json") as cfg:
     calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
@@ -75,23 +74,15 @@ def makeEmptyConfig(guildId: int, channelId: int, messageId: int)-> MessageConfi
     })
     return MessageConfig(guildId, channelId, messageId, defaultStates, embed, image)
     
-def addConfigFile(guildId: int, channelId: int, messageId: int):
+async def addConfigFile(guildId: int, channelId: int, messageId: int):
     channels = []
    
-    with open(messageListFile, 'r+') as file:
-        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
-        matches = [x for x in channels if x.channelId == channelId]
-        if not matches or len(matches) == 0:
-            channels.append(makeEmptyConfig(guildId, channelId, messageId))
+    channels = await getConfigs()
+    matches = [x for x in channels if x.channelId == channelId]
+    if not matches or len(matches) == 0:
+        channels.append(makeEmptyConfig(guildId, channelId, messageId))
         
-    # create randomly named temporary file to avoid 
-    # interference with other thread/asynchronous request
-    tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
-    with open(tempfile, 'w') as f:
-        json.dump([c.to_dict() for c in channels], f, indent=4)
-
-    # rename temporary file replacing old file
-    os.replace(tempfile, messageListFile)
+    await putConfigs(channels)
 
 def buildCalendarSyncUrls(config: MessageConfig)-> dict:
     friendly = shareBaseUrl
@@ -101,6 +92,29 @@ def buildCalendarSyncUrls(config: MessageConfig)-> dict:
     premier += "&cid=".join([cal.calendarId for cal in calsForConfig]) 
     return dict(premier=premier, friendly=friendly)    
 
+async def putConfigs(configs: list[MessageConfig]):
+    
+    try:
+        url = f"{apiBase}/consume-configs"
+        response = requests.post(
+            url,
+            json={"items": [config.to_dict() for config in configs]},
+        )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return
+        
+async def getConfigs()-> list[MessageConfig]:
+    try:
+        url = f"{apiBase}/message-configs"
+        response = requests.get(url)
+        response.raise_for_status()
+        return [MessageConfig.from_dict(item) for item in response.json()]
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return []
+    
 async def getVGEvents()-> list[LocatorEvent]:
     url = "https://www.pokedata.ovh/events/tableapi/index_table.php"
 
@@ -524,12 +538,9 @@ async def clearFutureForState(cals:list[CalendarConfig]):
 @bot.event
 async def on_ready():
     print(f"{bot.user} is online, pid is: {os.getpid()}")
-    if not Path(messageListFile).is_file():
-        with open(messageListFile, "w") as file:
-            file.write("[]")
     os.makedirs('output', exist_ok=True)
-    # if not runUpdate.is_running():
-        # runUpdate.start()
+    if not runUpdate.is_running():
+        runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -545,9 +556,7 @@ async def runUpdate():
     curChannel = None
     curMessage = None
     
-    channels = []
-    with open(messageListFile, 'r+', encoding='utf-8') as file:
-        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
+    channels = await getConfigs()
     if not channels:
         return
     
@@ -560,16 +569,11 @@ async def runUpdate():
             msg = await channel.fetch_message(curMessage)
             await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
         except discord.errors.NotFound as error:
-            with open(messageListFile, 'r+') as file:
-                channels = [MessageConfig.from_dict(item) for item in json.load(file)]
-                valids = [x for x in channels if x.channelId != curChannel]
+            channels = await getConfigs()
+            valids = [x for x in channels if x.channelId != curChannel]
                     
-            tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
-            with open(tempfile, 'w') as f:
-                json.dump([c.to_dict() for c in valids], f, indent=4)
+            await putConfigs(valids)
 
-            # rename temporary file replacing old file
-            os.replace(tempfile, messageListFile)
     print(f"update finished at {(datetime.now()).astimezone().isoformat()}")
         
 @bot.slash_command(name="init", description="initalize calendar to this channel")
@@ -578,9 +582,8 @@ async def init(ctx: discord.ApplicationContext):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     
-    with open(messageListFile, 'r+') as file:
-        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
-        valids = [x for x in channels if x.channelId == ctx.channel_id]
+    channels = await getConfigs()
+    valids = [x for x in channels if x.channelId == ctx.channel_id]
 
     if valids is not None and len(valids) != 0:
         await ctx.respond("A calendar was found for this channel. Please run /detach to remove the current calendar reference then rerun /init", ephemeral=True, delete_after=15)
@@ -605,7 +608,7 @@ async def init(ctx: discord.ApplicationContext):
     channelId = ctx.channel_id
     messageId = message.id
 
-    addConfigFile(guildId, channelId, messageId)
+    await addConfigFile(guildId, channelId, messageId)
     
     if not runUpdate.is_running():  
         runUpdate.start()
@@ -686,9 +689,9 @@ async def refresh(ctx: discord.ApplicationContext):
           
     await ctx.respond(content="Refreshing calendar graphic", ephemeral=True, delete_after=15)
     
-    with open(messageListFile, 'r+') as file:
-        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
-        valids = [x for x in channels if x.channelId == ctx.channel_id]
+    
+    channels = await getConfigs()
+    valids = [x for x in channels if x.channelId == ctx.channel_id]
 
     if valids is None or len(valids) == 0:
         await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
@@ -702,9 +705,8 @@ async def refresh(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="detach", description="Detach the current embed to reinitalize it and stop it from updating")
 async def detach(ctx: discord.ApplicationContext):
-    with open(messageListFile, 'r+') as file:
-        channels = [MessageConfig.from_dict(item) for item in json.load(file)]
-        valids = [x for x in channels if x.channelId == ctx.channel_id]
+    channels = await getConfigs()
+    valids = [x for x in channels if x.channelId == ctx.channel_id]
 
     if valids is None or len(valids) == 0:
         await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
@@ -712,12 +714,8 @@ async def detach(ctx: discord.ApplicationContext):
     
     channels = [cfg for cfg in channels if cfg.channelId != ctx.channel_id]
     
-    tempfile = os.path.join(os.path.dirname(messageListFile), str(uuid.uuid4()))
-    with open(tempfile, 'w') as f:
-        json.dump([c.to_dict() for c in channels], f, indent=4)
+    await putConfigs(channels)
 
-    # rename temporary file replacing old file
-    os.replace(tempfile, messageListFile)
     await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
     
 bot.run(os.getenv('TOKEN')) # run the bot with the token
