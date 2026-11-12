@@ -2,13 +2,11 @@ from datetime import datetime, timedelta
 import json
 import subprocess
 import time
-import uuid
 import zoneinfo
 import discord
 import os
 from dotenv import load_dotenv
 import requests
-import os.path
 import re
 from discord.ext import tasks
 from pathlib import Path
@@ -35,7 +33,10 @@ guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 defaultStates = ["Maryland", "Virginia", "District of Columbia"]
 defaultTitle = "Upcoming Premier Events"
 shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
-apiBase = "http://localhost:3000/api"
+apiBase = "http://localhost:4200/api"
+
+apiKey =  os.getenv('API_KEY')
+# apiBase = "https://mismatched.gg/mismatched-vgc-services/api"
 
 with open("configs/calendarConfigs.json") as cfg:
     calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
@@ -97,6 +98,7 @@ async def putConfigs(configs: list[MessageConfig]):
         url = f"{apiBase}/dump-configs"
         response = requests.post(
             url,
+            headers={"x-api-key": apiKey},
             json={"items": [config.to_api_response_dict() for config in configs]},
         )
         response.raise_for_status()
@@ -107,7 +109,7 @@ async def putConfigs(configs: list[MessageConfig]):
 async def getConfigs()-> list[MessageConfig]:
     try:
         url = f"{apiBase}/message-configs"
-        response = requests.get(url)
+        response = requests.get(url, headers={"x-api-key": apiKey})
         response.raise_for_status()
         responseObj = []
         for res in response.json():
@@ -580,6 +582,7 @@ async def runUpdate():
                 msg = await channel.fetch_message(curMessage)
                 await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
             except discord.errors.NotFound as error:
+                print(f"Config for for channel: {curChannel}, message: {curMessage} could not connect. Removing config.")
                 channels = await getConfigs()
                 valids = [x for x in channels if x.channelId != curChannel]
                         
@@ -588,8 +591,7 @@ async def runUpdate():
         print(f"update finished at {(datetime.now()).astimezone().isoformat()}")
     except Exception as e:
         print(f"Update failed at {datetime.now().isoformat()}, re-executing loop in 15 minutes")
-        runUpdate.change_interval(minutes=15)
-        
+        runUpdate.change_interval(minutes=15)       
         
 @bot.slash_command(name="init", description="initalize calendar to this channel")
 async def init(ctx: discord.ApplicationContext):
