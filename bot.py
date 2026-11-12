@@ -33,10 +33,10 @@ guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 defaultStates = ["Maryland", "Virginia", "District of Columbia"]
 defaultTitle = "Upcoming Premier Events"
 shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
-apiBase = "http://localhost:4200/api"
 
 apiKey =  os.getenv('API_KEY')
-# apiBase = "https://mismatched.gg/mismatched-vgc-services/api"
+apiBase = "https://mismatched.gg/mismatched-vgc-services/api"
+# apiBase = "http://localhost:4200/api"
 
 with open("configs/calendarConfigs.json") as cfg:
     calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
