@@ -35,7 +35,7 @@ defaultTitle = "Upcoming Premier Events"
 shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
 
 apiKey =  os.getenv('API_KEY')
-apiBase = "https://mismatched.gg/mismatched-vgc-services/api"
+apiBase = "https://bot.mismatched.gg/api"
 # apiBase = "http://localhost:4200/api"
 
 with open("configs/calendarConfigs.json") as cfg:
