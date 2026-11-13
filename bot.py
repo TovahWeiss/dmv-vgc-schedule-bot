@@ -36,7 +36,7 @@ shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
 
 apiKey =  os.getenv('API_KEY')
 apiBase = "https://bot.mismatched.gg/api"
-# apiBase = "http://localhost:4200/api"
+apiBase = "http://localhost:4200/api"
 
 with open("configs/calendarConfigs.json") as cfg:
     calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
@@ -45,6 +45,10 @@ with open("configs/calendarConfigs.json") as cfg:
 with open("configs/graphicConfig.json") as cfg:
     graphicConfig = GraphicConfig.from_dict(json.load(cfg))
     print(f"Loaded graphic config from file")
+
+with open("configs/staticCalendarConfig.json") as cfg:
+    staticCalendarConfig = MessageConfig.from_dict(json.load(cfg))
+    print(f"Loaded static calendar config from file")
 
 with open("configs/states.json") as stateFile:
     stateOptions = json.load(stateFile)
@@ -92,6 +96,28 @@ def buildCalendarSyncUrls(config: MessageConfig)-> dict:
     friendly += "&cid=".join([cal.friendlyCalId for cal in calsForConfig])
     premier += "&cid=".join([cal.calendarId for cal in calsForConfig]) 
     return dict(premier=premier, friendly=friendly)    
+
+async def uploadStaticCalendar(fileName:str):
+    if(fileName is None):
+        error = "File name Not supplied"
+        print(f"Error in uploading static calendar: {error}")
+        raise ValueError(error)
+    
+    try:
+        url = f"{apiBase}/calendar-image"
+        with open(f'output/{fileName}.png', "rb") as f:
+            # files = {"file": (f"{fileName}.png", f, "image/png")}
+            response = requests.post(
+                url,
+                headers={
+                    "x-api-key": apiKey,
+                    "Content-Type": "image/png"},
+                data=f
+            )
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Error uploading static calendar: {e}")
+        raise e
 
 async def putConfigs(configs: list[MessageConfig]):
     try:
@@ -368,7 +394,7 @@ async def checkAndDeleteEvents(playListings: list[LocatorEvent], existingCalEven
         print(f"Error occured deleting calendar events: {error}")
         raise error   
 
-async def makeGraphicForChannel(msgConfig: MessageConfig): 
+async def makeGraphicForChannel(msgConfig: MessageConfig, fileName:str = None): 
     calConfigForChannel = [x for x in calendarConfigs if x.state in msgConfig.stateSelections]   
     existingEvents = await getExistingCalItems(calConfigForChannel)
     if(existingEvents is None or len(existingEvents) == 0):
@@ -469,8 +495,12 @@ async def makeGraphicForChannel(msgConfig: MessageConfig):
         rowIndex += 1
 
     d.set_pixel_scale(2)  
-    d.save_svg('output/schedule.svg')
-    d.save_png('output/schedule.png')
+    
+    if(fileName is None):
+        fileName = 'schedule'
+        
+    d.save_svg('output/' + fileName + '.svg')
+    d.save_png('output/' + fileName + '.png')
  
 async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.embed:
     if(msgCfg.stateSelections is None or len(msgCfg.stateSelections) == 0):
@@ -552,6 +582,8 @@ async def on_ready():
     os.makedirs('output', exist_ok=True)
     if not runUpdate.is_running():
         runUpdate.start()
+    if not createStaticCalendarImage.is_running():
+        createStaticCalendarImage.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -733,5 +765,17 @@ async def detach(ctx: discord.ApplicationContext):
     await putConfigs(channels)
 
     await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
-    
+ 
+@tasks.loop(hours=12)
+async def createStaticCalendarImage():
+    print(f"Creating static new calender graphic at {(datetime.now()).astimezone().isoformat()}")
+    try:
+       
+        fileName = 'staticCalendar'
+        await makeGraphicForChannel(staticCalendarConfig, fileName)
+        await uploadStaticCalendar(fileName)
+        print(f"Publish static calendar finished at {(datetime.now()).astimezone().isoformat()}")
+    except Exception as e:
+        print(f"Publish static calendar failed at {datetime.now().isoformat()}, see ya in 12 hours.")
+   
 bot.run(os.getenv('TOKEN')) # run the bot with the token
