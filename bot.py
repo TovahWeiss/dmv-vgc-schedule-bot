@@ -60,7 +60,7 @@ def isEmpty(s:str)->bool:
 def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
-def makeEmptyConfig(guildId: int, channelId: int, messageId: int)-> MessageConfig:
+def makeEmptyConfig(guildName:str, guildId: int, channelId: int, messageId: int)-> MessageConfig:
     embed = MessageEmbedConfig(defaultTitle,"","","")
     image = MessageImageConfig.from_dict({
         "title": defaultTitle,
@@ -73,15 +73,15 @@ def makeEmptyConfig(guildId: int, channelId: int, messageId: int)-> MessageConfi
         "rowBackgroundColor": "white",
         "highlightColor": "dodgerblue"
     })
-    return MessageConfig(guildId, channelId, messageId, defaultStates, embed, image)
+    return MessageConfig(guildName, guildId, channelId, messageId, defaultStates, embed, image)
     
-async def addConfigFile(guildId: int, channelId: int, messageId: int):
+async def addConfigFile(guildName:str, guildId: int, channelId: int, messageId: int):
     channels = []
    
     channels = await getConfigs()
     matches = [x for x in channels if x.channelId == channelId]
     if not matches or len(matches) == 0:
-        channels.append(makeEmptyConfig(guildId, channelId, messageId))
+        channels.append(makeEmptyConfig(guildName, guildId, channelId, messageId))
         
     await putConfigs(channels)
 
@@ -620,12 +620,12 @@ async def init(ctx: discord.ApplicationContext):
        
     await ctx.respond(content="Come on Barbie let's go party! Making you a new graphic. Please configure it via the web page.", ephemeral=True, delete_after=15)
     message = await ctx.send(embed=embed) 
-    
+    guildName = ctx.guild.name
     guildId = ctx.guild_id
     channelId = ctx.channel_id
     messageId = message.id
 
-    await addConfigFile(guildId, channelId, messageId)
+    await addConfigFile(guildName, guildId, channelId, messageId)
     
     if not runUpdate.is_running():  
         runUpdate.start()
