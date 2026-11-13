@@ -36,7 +36,7 @@ shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
 
 apiKey =  os.getenv('API_KEY')
 apiBase = "https://bot.mismatched.gg/api"
-apiBase = "http://localhost:4200/api"
+# apiBase = "http://localhost:4200/api"
 
 with open("configs/calendarConfigs.json") as cfg:
     calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
