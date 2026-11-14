@@ -7,9 +7,9 @@
     "fontFamily": "Arial",
     "rowHeight": 44,
     "rowScheduleStart": 140,
-    "logoSize": 90,
+    "logoSize": 80,
     "cornerRadius": 10,
-    "logoPath": "assets/DMV_Falinks.png",
+    "logoPath": "assets/mismatched-icon.png",
     "cupIconPath": "assets/cup.png",
     "chalIconPath": "assets/chal.png",
     "unknownIconPath": "assets/unknown.png"

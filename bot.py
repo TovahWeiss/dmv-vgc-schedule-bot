@@ -422,7 +422,7 @@ async def makeGraphicForChannel(msgConfig: MessageConfig, fileName:str = None):
     d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill='white', rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
     d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill=gradient, rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
     
-    d.append(draw.Image( x=graphicConfig.margin + 20, y=graphicConfig.margin, width=graphicConfig.logoSize, height=graphicConfig.logoSize,  path=graphicConfig.logoPath, embed=True) )
+    d.append(draw.Image( x=graphicConfig.margin + 20, y=graphicConfig.margin + 5, width=graphicConfig.logoSize, height=graphicConfig.logoSize,  path=graphicConfig.logoPath, embed=True) )
     d.append(draw.Text(msgConfig.image.title, 54, 640, 50, fill=msgConfig.image.headerTextColor, center=True, class_='title-text', font_family=graphicConfig.headerFont)) 
     
     rowIndex = 0
@@ -575,15 +575,24 @@ async def clearFutureForState(cals:list[CalendarConfig]):
             print ('Event deleted: %s at %s' % (calEvent.summary, now))                   
     except HttpError as error:
         print(f"Error occured clearing calendar events: {error}")      
-                   
+ 
+async def createStaticCalendarImage():
+    print(f"Creating static new calender graphic at {(datetime.now()).astimezone().isoformat()}")
+    try:
+        fileName = 'staticCalendar'
+        await makeGraphicForChannel(staticCalendarConfig, fileName)
+        await uploadStaticCalendar(fileName)
+        print(f"Publish static calendar finished at {(datetime.now()).astimezone().isoformat()}")
+    except Exception as e:
+        print(f"Publish static calendar failed at {(datetime.now()).astimezone().isoformat()}")
+        raise e
+                  
 @bot.event
 async def on_ready():
     print(f"{bot.user} is online, pid is: {os.getpid()}")
     os.makedirs('output', exist_ok=True)
-    if not runUpdate.is_running():
-        runUpdate.start()
-    if not createStaticCalendarImage.is_running():
-        createStaticCalendarImage.start()
+    # if not runUpdate.is_running():
+    #     runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -619,6 +628,9 @@ async def runUpdate():
                 valids = [x for x in channels if x.channelId != curChannel]
                         
                 await putConfigs(valids)
+                
+       
+        await createStaticCalendarImage()
 
         print(f"update finished at {(datetime.now()).astimezone().isoformat()}")
     except Exception as e:
@@ -640,18 +652,20 @@ async def init(ctx: discord.ApplicationContext):
     
     runUpdate.cancel()
     embed = discord.Embed(
-        title="DMV VGC Schedule",
+        title="Mismatched VGC Calendar Bot",
         color=discord.Color.yellow()
     )
     
     embed.add_field(
         name="Initalizing", 
-        value="Hold tight for a while please",
+        value="Hold tight, this may take a minute!",
         inline=True
     )
-       
-    await ctx.respond(content="Come on Barbie let's go party! Making you a new graphic. Please configure it via the web page.", ephemeral=True, delete_after=15)
+           
     message = await ctx.send(embed=embed) 
+    await ctx.respond(content="Come on Barbie let's go party! Making you a new graphic as we speak. \n[Configure Data](https://bot.mismatched.gg) here after the calendar has initalized, then run `/refresh` to pull in your changes instantly!", ephemeral=True)
+        
+    
     guildName = ctx.guild.name
     guildId = ctx.guild_id
     channelId = ctx.channel_id
@@ -765,17 +779,5 @@ async def detach(ctx: discord.ApplicationContext):
     await putConfigs(channels)
 
     await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
- 
-@tasks.loop(hours=12)
-async def createStaticCalendarImage():
-    print(f"Creating static new calender graphic at {(datetime.now()).astimezone().isoformat()}")
-    try:
-       
-        fileName = 'staticCalendar'
-        await makeGraphicForChannel(staticCalendarConfig, fileName)
-        await uploadStaticCalendar(fileName)
-        print(f"Publish static calendar finished at {(datetime.now()).astimezone().isoformat()}")
-    except Exception as e:
-        print(f"Publish static calendar failed at {datetime.now().isoformat()}, see ya in 12 hours.")
-   
+    
 bot.run(os.getenv('TOKEN')) # run the bot with the token
