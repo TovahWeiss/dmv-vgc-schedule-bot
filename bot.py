@@ -66,9 +66,9 @@ def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
 def makeEmptyConfig(guildName:str, guildId: int, channelId: int, messageId: int)-> MessageConfig:
-    embed = MessageEmbedConfig(defaultCalendarTitle,"","","")
+    embed = MessageEmbedConfig(defaultTitle,"","","")
     image = MessageImageConfig.from_dict({
-        "title": defaultTitle,
+        "title": defaultCalendarTitle,
         "headerGradientStartColor": "#D0EEF5",
         "headerGradientEndColor": "#21B7D9",
         "imageBackgroundColor": "black",
