@@ -502,7 +502,7 @@ async def makeGraphicForChannel(msgConfig: MessageConfig, fileName:str = None):
     d.save_svg('output/' + fileName + '.svg')
     d.save_png('output/' + fileName + '.png')
  
-async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.embed:
+async def buildEmbedForChannel(msgCfg: MessageConfig) -> discord.Embed:
     if(msgCfg.stateSelections is None or len(msgCfg.stateSelections) == 0):
         return
     
