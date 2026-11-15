@@ -591,8 +591,8 @@ async def createStaticCalendarImage():
 async def on_ready():
     print(f"{bot.user} is online, pid is: {os.getpid()}")
     os.makedirs('output', exist_ok=True)
-    # if not runUpdate.is_running():
-    #     runUpdate.start()
+    if not runUpdate.is_running():
+        runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
