@@ -31,7 +31,8 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 guidRegex = r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 
 defaultStates = ["Maryland", "Virginia", "District of Columbia"]
-defaultTitle = "Upcoming Premier Events"
+defaultTitle = "Upcoming VGC Events"
+defaultCalendarTitle = "Upcoming Premier Events"
 shareBaseUrl = "https://calendar.google.com/calendar/u/0/r?cid="
 
 apiKey =  os.getenv('API_KEY')
@@ -65,7 +66,7 @@ def getSACreds():
     return service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
 def makeEmptyConfig(guildName:str, guildId: int, channelId: int, messageId: int)-> MessageConfig:
-    embed = MessageEmbedConfig(defaultTitle,"","","")
+    embed = MessageEmbedConfig(defaultCalendarTitle,"","","")
     image = MessageImageConfig.from_dict({
         "title": defaultTitle,
         "headerGradientStartColor": "#D0EEF5",
