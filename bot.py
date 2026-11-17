@@ -592,8 +592,8 @@ async def createStaticCalendarImage():
 async def on_ready():
     print(f"{bot.user} is online, pid is: {os.getpid()}")
     os.makedirs('output', exist_ok=True)
-    # if not runUpdate.is_running():
-    #     runUpdate.start()
+    if not runUpdate.is_running():
+        runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -781,8 +781,8 @@ async def detach(ctx: discord.ApplicationContext):
 
     await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
     
-@bot.slash_command(name="listcals", description="Detach the current embed to reinitalize it and stop it from updating")
-async def listcals(ctx: discord.ApplicationContext):
+@bot.slash_command(name="calendars", description="Detach the current embed to reinitalize it and stop it from updating")
+async def calendars(ctx: discord.ApplicationContext):
     v = GroupView(stateOptions)
     await ctx.respond(view=v, ephemeral=True)
 
