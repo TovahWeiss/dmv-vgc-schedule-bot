@@ -8,9 +8,9 @@ class GroupView(ui.View):
     super().__init__(timeout=180)
     self.value = None
     stateOptions = {
-        'states A - L': list(states.keys())[0 : 18], 
-        'states M - R': list(states.keys())[19:40],
-        'states S -': list(states.keys())[41:]
+        'states A - L': list(states)[0 : 19], 
+        'states M - R': list(states)[20:40],
+        'states S - ': list(states)[41:]
     }
     
     items = [{'id': k, 'subOps': v} for k,v  in list(stateOptions.items())]

@@ -783,7 +783,9 @@ async def detach(ctx: discord.ApplicationContext):
     
 @bot.slash_command(name="calendars", description="Detach the current embed to reinitalize it and stop it from updating")
 async def calendars(ctx: discord.ApplicationContext):
-    v = GroupView(stateOptions)
+    states = [c.state for c in calendarConfigs]
+    states = sorted(states)
+    v = GroupView(states)
     await ctx.respond(view=v, ephemeral=True)
 
 bot.run(os.getenv('TOKEN')) # run the bot with the token
