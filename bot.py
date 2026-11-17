@@ -14,12 +14,12 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.oauth2 import service_account
 import drawsvg as draw
+from modules.GroupView import GroupView
 from modules.MessageConfig import MessageConfig, MessageEmbedConfig, MessageImageConfig
 from modules.CalendarConfig import CalendarConfig
 from modules.GraphicConfig import GraphicConfig
 from modules.GoogleCalendarEvent import GoogleCalendarEvent
 from modules.LocatorEvent import LocatorEvent
-from modules.DynamicView import DynamicView
 
 load_dotenv() # load all the variables from the env file
 bot = discord.Bot()
@@ -592,8 +592,8 @@ async def createStaticCalendarImage():
 async def on_ready():
     print(f"{bot.user} is online, pid is: {os.getpid()}")
     os.makedirs('output', exist_ok=True)
-    if not runUpdate.is_running():
-        runUpdate.start()
+    # if not runUpdate.is_running():
+    #     runUpdate.start()
     print(f"{bot.user} has initialized!")
 
 @tasks.loop(hours=1)
@@ -781,4 +781,9 @@ async def detach(ctx: discord.ApplicationContext):
 
     await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
     
+@bot.slash_command(name="listcals", description="Detach the current embed to reinitalize it and stop it from updating")
+async def listcals(ctx: discord.ApplicationContext):
+    v = GroupView(stateOptions)
+    await ctx.respond(view=v, ephemeral=True)
+
 bot.run(os.getenv('TOKEN')) # run the bot with the token
