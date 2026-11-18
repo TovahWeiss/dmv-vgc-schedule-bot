@@ -3,7 +3,7 @@
     "embedW": 1280,
     "headerHeight": 100,
     "margin": 5,
-    "headerFont":"'Noto Sans Black', Impact",
+    "headerFont":"'Montserrat Black', Impact",
     "fontFamily": "Arial",
     "rowHeight": 44,
     "rowScheduleStart": 140,
