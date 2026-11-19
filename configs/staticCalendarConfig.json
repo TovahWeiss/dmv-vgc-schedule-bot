@@ -20,9 +20,11 @@
         "headerGradientEndColor": "#21B7D9",
         "imageBackgroundColor": "#000000",
         "textPrimaryColor": "#000000",
-        "headerTextColor": "#000000",
+        "headerTextColor": "#ffffff",
         "locationTextColor": "#808080",
         "rowBackgroundColor": "#ffffff",
-        "highlightColor": "#1e90ff"
+        "highlightColor": "#1e90ff",
+        "useCustomGradient": false,
+        "textStrokeColor":"#000000"
     }
 }

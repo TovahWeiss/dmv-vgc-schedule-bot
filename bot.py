@@ -73,10 +73,12 @@ def makeEmptyConfig(guildName:str, guildId: int, channelId: int, messageId: int)
         "headerGradientEndColor": "#21B7D9",
         "imageBackgroundColor": "black",
         "textPrimaryColor": "black",
+        "textStrokeColor" : "white",
         "headerTextColor": "black",
         "locationTextColor": "grey",
         "rowBackgroundColor": "white",
-        "highlightColor": "dodgerblue"
+        "highlightColor": "dodgerblue",
+        "useCustomGradient": False
     })
     return MessageConfig(guildName, guildId, channelId, messageId, defaultStates, embed, image)
     
@@ -417,13 +419,18 @@ async def makeGraphicForChannel(msgConfig: MessageConfig, fileName:str = None):
     """
     d.append_css(css_rules)
     
-    gradient = draw.LinearGradient(1, graphicConfig.embedW/6, graphicConfig.embedW/2, graphicConfig.embedW/3)
-    gradient.add_stop(0, msgConfig.image.headerGradientStartColor, 1)
-    gradient.add_stop(1, msgConfig.image.headerGradientEndColor, 1)
     d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill='white', rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
-    d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill=gradient, rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))
+       
+    if(msgConfig.image.useCustomGradient):
+        gradient = draw.LinearGradient(1, graphicConfig.embedW/6, graphicConfig.embedW/2, graphicConfig.embedW/3)
+        gradient.add_stop(0, msgConfig.image.headerGradientStartColor, 1)
+        gradient.add_stop(1, msgConfig.image.headerGradientEndColor, 1)
+        d.append(draw.Rectangle(graphicConfig.margin, 0, graphicConfig.embedW - (2*graphicConfig.margin), graphicConfig.headerHeight, fill=gradient, rx=graphicConfig.cornerRadius, ry=graphicConfig.cornerRadius))       
+    else:
+        d.append(draw.Image( x=graphicConfig.margin, y=0, width=graphicConfig.embedW - (2*graphicConfig.margin), height=graphicConfig.headerHeight,  path="assets/banner.png", embed=True) )
     
-    d.append(draw.Image( x=graphicConfig.margin + 20, y=graphicConfig.margin + 5, width=graphicConfig.logoSize, height=graphicConfig.logoSize,  path=graphicConfig.logoPath, embed=True) )
+    d.append(draw.Image( x=graphicConfig.margin + 25, y=graphicConfig.margin + 5, width=graphicConfig.logoSize, height=graphicConfig.logoSize,  path=graphicConfig.logoPath, embed=True) )    
+    d.append(draw.Text(msgConfig.image.title, 54, 640, 50, fill=msgConfig.image.headerTextColor, center=True, class_='title-text', font_family=graphicConfig.headerFont, stroke=msgConfig.image.textStrokeColor, stroke_width=3))
     d.append(draw.Text(msgConfig.image.title, 54, 640, 50, fill=msgConfig.image.headerTextColor, center=True, class_='title-text', font_family=graphicConfig.headerFont)) 
     
     rowIndex = 0
