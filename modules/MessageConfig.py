@@ -22,10 +22,12 @@ class MessageImageConfig:
     headerGradientEndColor: str
     imageBackgroundColor: str
     textPrimaryColor: str
+    textStrokeColor: str
     headerTextColor: str
     locationTextColor: str
     rowBackgroundColor: str
     highlightColor: str
+    useCustomGradient:bool
 
     @classmethod
     def from_dict(cls, data):

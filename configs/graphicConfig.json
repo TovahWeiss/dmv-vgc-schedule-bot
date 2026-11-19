@@ -9,7 +9,7 @@
     "rowScheduleStart": 140,
     "logoSize": 80,
     "cornerRadius": 10,
-    "logoPath": "assets/mismatched-icon.png",
+    "logoPath": "assets/mismatched-icon-round.png",
     "cupIconPath": "assets/cup.png",
     "chalIconPath": "assets/chal.png",
     "unknownIconPath": "assets/unknown.png"
