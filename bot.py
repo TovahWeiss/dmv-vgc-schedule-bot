@@ -647,7 +647,7 @@ async def runUpdate():
         
 @bot.slash_command(name="init", description="initalize calendar to this channel")
 async def init(ctx: discord.ApplicationContext):
-    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+    if not ctx.author.guild_permissions.manage_channels and not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     
@@ -666,7 +666,7 @@ async def init(ctx: discord.ApplicationContext):
     
     embed.add_field(
         name="Initalizing", 
-        value="Hold tight, this may take a minute!",
+        value="Hold tight, this may take a minute! \n Please note, the bot will not respond untill after it has initalized. Give it a couple minutes please!",
         inline=True
     )
            
@@ -686,7 +686,7 @@ async def init(ctx: discord.ApplicationContext):
 
 @bot.slash_command(name="force", description="force all instances to update")
 async def force(ctx: discord.ApplicationContext):
-    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+    if not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
     
@@ -753,10 +753,9 @@ async def clearfuture(ctx: discord.ApplicationContext, state: str):
 
 @bot.slash_command(name="refresh", description="refresh the calendar image in this channel")
 async def refresh(ctx: discord.ApplicationContext):
-    if not ctx.author.guild_permissions.administrator and not await ctx.bot.is_owner(ctx.author):
+    if not ctx.author.guild_permissions.manage_channels and not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
-          
     await ctx.respond(content="Refreshing calendar graphic", ephemeral=True, delete_after=15)
     
     
