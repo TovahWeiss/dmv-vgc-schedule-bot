@@ -666,7 +666,7 @@ async def init(ctx: discord.ApplicationContext):
     
     embed.add_field(
         name="Initalizing", 
-        value="Hold tight, this may take a minute! \n Please note, the bot will not respond untill after it has initalized. Give it a couple minutes please!",
+        value="Hold tight, this may take a minute! \n Please note, the bot will not respond untill after it has initalized. Give it a couple minutes!",
         inline=True
     )
            
