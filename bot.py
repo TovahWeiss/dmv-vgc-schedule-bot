@@ -650,65 +650,69 @@ async def init(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.manage_channels and not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
-    
-    channels = await getConfigs()
-    valids = [x for x in channels if x.channelId == ctx.channel_id]
+    try:
+        channels = await getConfigs()
+        valids = [x for x in channels if x.channelId == ctx.channel_id]
 
-    if valids is not None and len(valids) != 0:
-        await ctx.respond("A calendar was found for this channel. Please run /detach to remove the current calendar reference then rerun /init", ephemeral=True, delete_after=15)
-        return
-    
-    runUpdate.cancel()
-    embed = discord.Embed(
-        title="Mismatched VGC Calendar Bot",
-        color=discord.Color.yellow()
-    )
-    
-    embed.add_field(
-        name="Initalizing", 
-        value="Hold tight, this may take a minute! \n Please note, the bot will not respond untill after it has initalized. Give it a couple minutes!",
-        inline=True
-    )
-           
-    message = await ctx.send(embed=embed) 
-    await ctx.respond(content="Come on Barbie let's go party! Making you a new graphic as we speak. \n[Configure Data](https://bot.mismatched.gg) here after the calendar has initalized, then run `/refresh` to pull in your changes instantly!", ephemeral=True)
+        if valids is not None and len(valids) != 0:
+            await ctx.respond("A calendar was found for this channel. Please run /detach to remove the current calendar reference then rerun /init", ephemeral=True, delete_after=15)
+            return
         
-    
-    guildName = ctx.guild.name
-    guildId = ctx.guild_id
-    channelId = ctx.channel_id
-    messageId = message.id
+        runUpdate.cancel()
+        embed = discord.Embed(
+            title="Mismatched VGC Calendar Bot",
+            color=discord.Color.yellow()
+        )
+        
+        embed.add_field(
+            name="Initalizing", 
+            value="Hold tight, this may take a minute! \n Please note, the bot will not respond untill after it has initalized. Give it a couple minutes!",
+            inline=True
+        )
+            
+        message = await ctx.send(embed=embed) 
+        await ctx.respond(content="Come on Barbie let's go party! Making you a new graphic as we speak. \n[Configure Data](https://bot.mismatched.gg) here after the calendar has initalized, then run `/refresh` to pull in your changes instantly!", ephemeral=True)
+            
+        
+        guildName = ctx.guild.name
+        guildId = ctx.guild_id
+        channelId = ctx.channel_id
+        messageId = message.id
 
-    await addConfigFile(guildName, guildId, channelId, messageId)
-    
-    if not runUpdate.is_running():  
-        runUpdate.start()
+        await addConfigFile(guildName, guildId, channelId, messageId)
+        
+        if not runUpdate.is_running():  
+            runUpdate.start()
+    except Exception as e:
+        await ctx.respond(content="Oops... something went wrong, reach out to Tovah to check error logs.", ephemeral=True, delete_after=15)
 
 @bot.slash_command(name="force", description="force all instances to update")
 async def force(ctx: discord.ApplicationContext):
     if not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
-    
-    runUpdate.cancel()
-    
-    with open("configs/calendarConfigs.json") as cfg:
-        global calendarConfigs
-        calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
-        print(f"Loaded {len(calendarConfigs)} calendar configs from file")
+    try:
+        runUpdate.cancel()
         
-    with open("configs/graphicConfig.json") as cfg:
-        global graphicConfig
-        graphicConfig = GraphicConfig.from_dict(json.load(cfg))
-        print(f"Loaded graphic config from file")
-    
-    content = f"Loaded {len(calendarConfigs)} calendar configs from file!\n"
-    # content += "Loaded calendar views config from file!\n"
-    content += f"Loaded graphic config from file!\n"
-    await ctx.respond(content= content + "\nforcing schedule update!", ephemeral=True, delete_after=15)
-    
-    if not runUpdate.is_running():  
-            runUpdate.start()
+        with open("configs/calendarConfigs.json") as cfg:
+            global calendarConfigs
+            calendarConfigs = [CalendarConfig.from_dict(item) for item in json.load(cfg)]
+            print(f"Loaded {len(calendarConfigs)} calendar configs from file")
+            
+        with open("configs/graphicConfig.json") as cfg:
+            global graphicConfig
+            graphicConfig = GraphicConfig.from_dict(json.load(cfg))
+            print(f"Loaded graphic config from file")
+        
+        content = f"Loaded {len(calendarConfigs)} calendar configs from file!\n"
+        # content += "Loaded calendar views config from file!\n"
+        content += f"Loaded graphic config from file!\n"
+        await ctx.respond(content= content + "\nforcing schedule update!", ephemeral=True, delete_after=15)
+        
+        if not runUpdate.is_running():  
+                runUpdate.start()
+    except Exception as e:
+        await ctx.respond(content="Oops... something went wrong, reach out to Tovah to check error logs.", ephemeral=True, delete_after=15)
 
 @bot.slash_command(name="updatelog", description="prints bot update log")
 async def updatelog(ctx: discord.ApplicationContext):
@@ -724,74 +728,86 @@ async def updatelog(ctx: discord.ApplicationContext):
         message = f"```{result.stdout}```"
     except subprocess.CalledProcessError as e:
         await ctx.respond(f"Error running git log: {e.stderr}", ephemeral=True, delete_after=60)
-        raise e
     except FileNotFoundError:
         await ctx.respond(f"Git is not installed or the server system PATH. Please yell at Tovah", ephemeral=True, delete_after=60)
-        raise e
     
     await ctx.respond(message, ephemeral=True, delete_after=60)
    
 @bot.slash_command(name="clearfuture", description="Clears a states future events to full refresh for next cycle(debug use)")
 @discord.ext.commands.is_owner()
 async def clearfuture(ctx: discord.ApplicationContext, state: str):
-    if state is None:
-        await ctx.respond(f"Please enter a state, make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)
-        return
-    state  = state.strip().lower()
-    foundValue = next((k for k, v in stateOptions.items() if (k.lower() == state) or (v.lower() == state)), None)
-    if foundValue is None:
-        await ctx.respond(f"No state found named '{state}', make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)     
-        return
-    cal = [x for x in calendarConfigs if foundValue == x.state]
-    if len(cal) == 0:
-        await ctx.respond(f"No calendar configured for '{foundValue}'", ephemeral=True, delete_after=15)
-        return
-    await ctx.respond(f"Clearing calendars for {foundValue}", ephemeral=True, delete_after=15)
-    
-    await clearFutureForState(cal)
-    await ctx.respond(f"Cleared calendars for {foundValue}", ephemeral=True, delete_after=15)
+    try:
+        if state is None:
+            await ctx.respond(f"Please enter a state, make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)
+            return
+        state  = state.strip().lower()
+        foundValue = next((k for k, v in stateOptions.items() if (k.lower() == state) or (v.lower() == state)), None)
+        if foundValue is None:
+            await ctx.respond(f"No state found named '{state}', make sure to use the official 2 letter state code or proper name (case insensitve)", ephemeral=True, delete_after=15)     
+            return
+        cal = [x for x in calendarConfigs if foundValue == x.state]
+        if len(cal) == 0:
+            await ctx.respond(f"No calendar configured for '{foundValue}'", ephemeral=True, delete_after=15)
+            return
+        await ctx.respond(f"Clearing calendars for {foundValue}", ephemeral=True, delete_after=15)
+        
+        await clearFutureForState(cal)
+        await ctx.respond(f"Cleared calendars for {foundValue}", ephemeral=True, delete_after=15)
+    except Exception as e:
+        await ctx.respond(content="Oops... something went wrong, reach out to Tovah to check error logs.", ephemeral=True, delete_after=15)
 
 @bot.slash_command(name="refresh", description="refresh the calendar image in this channel")
 async def refresh(ctx: discord.ApplicationContext):
     if not ctx.author.guild_permissions.manage_channels and not await ctx.bot.is_owner(ctx.author):
         await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
-    await ctx.respond(content="Refreshing calendar graphic", ephemeral=True, delete_after=15)
-    
-    
-    channels = await getConfigs()
-    valids = [x for x in channels if x.channelId == ctx.channel_id]
+    try:
+        await ctx.respond(content="Refreshing calendar graphic", ephemeral=True, delete_after=15)
+        
+        
+        channels = await getConfigs()
+        valids = [x for x in channels if x.channelId == ctx.channel_id]
 
-    if valids is None or len(valids) == 0:
-        await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
-        return
-    
-    msgConfig = valids[0]
-    embed = await buildEmbedForChannel(msgConfig)
-    channel = await bot.fetch_channel(msgConfig.channelId)
-    msg = await channel.fetch_message(msgConfig.messageId)
-    await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
+        if valids is None or len(valids) == 0:
+            await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
+            return
+        
+        msgConfig = valids[0]
+        embed = await buildEmbedForChannel(msgConfig)
+        channel = await bot.fetch_channel(msgConfig.channelId)
+        msg = await channel.fetch_message(msgConfig.messageId)
+        await msg.edit(file=discord.File("output/schedule.png", filename="output/schedule.png"), embed=embed)
+    except Exception as e:
+        await ctx.respond(content="Oops... something went wrong, reach out to Tovah to check error logs.", ephemeral=True, delete_after=15)
 
 @bot.slash_command(name="detach", description="Detach the current embed to reinitalize it and stop it from updating")
 async def detach(ctx: discord.ApplicationContext):
-    await ctx.respond("Removing current channel config...", ephemeral=True, delete_after=15)
-    channels = await getConfigs()
-    valids = [x for x in channels if x.channelId == ctx.channel_id]
-
-    if valids is None or len(valids) == 0:
-        await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
+    if not ctx.author.guild_permissions.manage_channels and not await ctx.bot.is_owner(ctx.author):
+        await ctx.respond("I don't make deals with peasants!", ephemeral=True, delete_after=15)
         return
-    channels = [cfg for cfg in channels if cfg.channelId != ctx.channel_id]
-    
-    await putConfigs(channels)
+    try:
+        await ctx.respond("Removing current channel config...", ephemeral=True, delete_after=15)
+        channels = await getConfigs()
+        valids = [x for x in channels if x.channelId == ctx.channel_id]
 
-    await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
-    
+        if valids is None or len(valids) == 0:
+            await ctx.respond("No calendar was found for this channel. Please run /init to create one", ephemeral=True, delete_after=15)
+            return
+        channels = [cfg for cfg in channels if cfg.channelId != ctx.channel_id]
+        
+        await putConfigs(channels)
+
+        await ctx.respond("Removed current channel calndar config. Please run /init to make a new one. You may delete the existing instance", ephemeral=True, delete_after=15)
+    except Exception as e:
+        await ctx.respond(content="Oops... something went wrong, reach out to Tovah to check error logs.", ephemeral=True, delete_after=15)
 @bot.slash_command(name="calendars", description="Detach the current embed to reinitalize it and stop it from updating")
 async def calendars(ctx: discord.ApplicationContext):
-    states = [c.state for c in calendarConfigs]
-    states = sorted(states)
-    v = GroupView(states)
-    await ctx.respond(view=v, ephemeral=True)
+    try:
+        states = [c.state for c in calendarConfigs]
+        states = sorted(states)
+        v = GroupView(states)
+        await ctx.respond(view=v, ephemeral=True)
+    except Exception as e:
+        await ctx.respond(content="Oops... something went wrong, reach out to Tovah to check error logs.", ephemeral=True, delete_after=15)
 
 bot.run(os.getenv('TOKEN')) # run the bot with the token
